@@ -1,0 +1,5 @@
+pandas
+pydantic
+requests
+sqlalchemy
+psycopg2-binary

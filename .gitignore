@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.db
+data/raw/*
+data/processed/*
+data/curated/*
+logs/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/curated/.gitkeep
+!logs/.gitkeep
