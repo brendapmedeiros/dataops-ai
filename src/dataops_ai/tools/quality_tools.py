@@ -25,7 +25,7 @@ def check_nulls(df: pd.DataFrame, required_columns: list[str]) -> list[QualityIs
                     status="fail",
                     column=column,
                     rows_affected=len(df),
-                    details=f"Column {column} is missing, so nulls cannot be evaluated.",
+                    details=f"A coluna {_column_label(column)} nao existe, entao nao da para avaliar nulos nela.",
                 )
             )
             continue
@@ -37,7 +37,7 @@ def check_nulls(df: pd.DataFrame, required_columns: list[str]) -> list[QualityIs
                 status="fail" if null_count else "pass",
                 column=column,
                 rows_affected=null_count,
-                details=f"{null_count} null values found in {column}.",
+                details=f"{null_count} valor(es) nulo(s) encontrado(s) em {_column_label(column)}.",
             )
         )
     return issues
@@ -50,7 +50,7 @@ def check_duplicates(df: pd.DataFrame, subset: list[str]) -> QualityIssue:
             check_name="check_duplicates",
             status="fail",
             rows_affected=len(df),
-            details=f"Cannot check duplicates. Missing columns: {', '.join(missing_columns)}.",
+            details=f"Nao da para verificar duplicados. Colunas ausentes: {_join_columns(missing_columns)}.",
         )
 
     duplicate_count = int(df.duplicated(subset=subset).sum())
@@ -58,7 +58,7 @@ def check_duplicates(df: pd.DataFrame, subset: list[str]) -> QualityIssue:
         check_name="check_duplicates",
         status="fail" if duplicate_count else "pass",
         rows_affected=duplicate_count,
-        details=f"{duplicate_count} duplicate rows found using {', '.join(subset)}.",
+        details=f"{duplicate_count} linha(s) duplicada(s) usando {_join_columns(subset)}.",
     )
 
 
@@ -72,7 +72,7 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
                     status="fail",
                     column=column,
                     rows_affected=len(df),
-                    details=f"Expected column {column} is missing.",
+                    details=f"A coluna esperada {_column_label(column)} nao existe no dataset.",
                 )
             )
             continue
@@ -83,7 +83,7 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
                 check_name="check_schema",
                 status="pass" if actual_type == expected_type else "fail",
                 column=column,
-                details=f"Expected {expected_type}, got {actual_type}.",
+                details=f"Esperado: {_type_label(expected_type)}. Encontrado: {_type_label(actual_type)}.",
             )
         )
     return issues
@@ -96,7 +96,7 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
             status="fail",
             column=value_column,
             rows_affected=len(df),
-            details=f"Cannot check anomalies. Missing column {value_column}.",
+            details=f"Nao da para verificar anomalias. Coluna ausente: {_column_label(value_column)}.",
         )
 
     numeric_values = pd.to_numeric(df[value_column], errors="coerce")
@@ -109,7 +109,7 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
         status="fail" if affected else "pass",
         column=value_column,
         rows_affected=affected,
-        details=f"{invalid_count} invalid numeric values and {negative_count} negative values found.",
+        details=f"{invalid_count} valor(es) numerico(s) invalido(s) e {negative_count} valor(es) negativo(s).",
     )
 
 
@@ -134,4 +134,27 @@ def _semantic_dtype(series: pd.Series) -> str:
     if pd.api.types.is_numeric_dtype(series):
         return "numeric"
     return "text"
+
+
+def _column_label(column: str) -> str:
+    labels = {
+        "date": "data",
+        "value": "valor",
+        "series_code": "codigo da serie",
+        "source": "origem",
+    }
+    return labels.get(column, column)
+
+
+def _join_columns(columns: list[str]) -> str:
+    return ", ".join(_column_label(column) for column in columns)
+
+
+def _type_label(dtype: str) -> str:
+    labels = {
+        "datetime": "data",
+        "numeric": "numero",
+        "text": "texto",
+    }
+    return labels.get(dtype, dtype)
 
