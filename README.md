@@ -17,7 +17,7 @@ BCB API -> Extraction -> Transform -> Banco -> Data Quality -> Quality Agent -> 
 - Pydantic
 - SQLite local por padrao
 - PostgreSQL-ready via DATABASE_URL
-- Gemini opcional
+- Gemini opcional (`gemini-flash-latest`)
 
 ## Por que SQLite agora?
 

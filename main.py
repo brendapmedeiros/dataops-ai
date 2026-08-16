@@ -169,15 +169,15 @@ def _format_terminal_report(scenario: str, rows_loaded: int, quality_report, dia
         [
             "",
             "Diagnostico:",
-            diagnosis.summary,
+            _humanize_terminal_text(diagnosis.summary),
             "",
             "Possiveis causas:",
         ]
     )
-    lines.extend(f"- {cause}" for cause in diagnosis.probable_causes)
+    lines.extend(f"- {_humanize_terminal_text(cause)}" for cause in diagnosis.probable_causes)
 
     lines.extend(["", "Proximas acoes:"])
-    lines.extend(f"- {action}" for action in diagnosis.recommended_actions)
+    lines.extend(f"- {_humanize_terminal_text(action)}" for action in diagnosis.recommended_actions)
 
     if diagnosis.needs_investigation_agent:
         lines.append("\nProximo passo sugerido: mandar para o agente de investigacao na V2.")
@@ -206,8 +206,27 @@ def _column_label(column: str) -> str:
 
 
 def _plain_terminal_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFKD", text)
+    normalized = unicodedata.normalize("NFKD", text.replace("\ufffd", ""))
     return normalized.encode("ascii", "ignore").decode("ascii")
+
+
+def _humanize_terminal_text(text: str) -> str:
+    replacements = {
+        "'value'": "valor",
+        '"value"': "valor",
+        " value ": " valor ",
+        "dataset": "base",
+        "Dataset": "Base",
+        "casting": "conversao de tipo",
+        "scenario_01_null_values": "valores_nulos",
+        "scenario_02_schema_drift": "mudanca_estrutura",
+        "scenario_04_duplicate_records": "registros_duplicados",
+        "scenario_05_invalid_type": "tipo_invalido",
+    }
+    clean = _plain_terminal_text(text)
+    for old, new in replacements.items():
+        clean = clean.replace(old, new)
+    return clean
 
 
 if __name__ == "__main__":

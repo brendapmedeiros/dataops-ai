@@ -35,7 +35,9 @@ class DataQualityAgent:
             "needs_investigation_agent. "
             "A severity deve ser low, medium, high ou critical. "
             "Escreva summary, probable_causes e recommended_actions em portugues do Brasil, "
-            "com tom direto e natural, sem cara de texto generico de IA.\n\n"
+            "sem acentos, com tom direto e natural, sem cara de texto generico de IA. "
+            "Nao cite nomes internos em ingles como value, dataset ou scenario_01_null_values; "
+            "prefira termos como valor, base e cenario testado.\n\n"
             f"QUALITY_REPORT={report.model_dump_json()}\n"
             f"CONTEXT={json.dumps(context, ensure_ascii=True)}"
         )
