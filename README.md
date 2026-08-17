@@ -147,6 +147,12 @@ Validar banco e API antes de executar a pipeline:
 python main.py status
 ```
 
+Rodar uma validacao rapida do core:
+
+```bash
+python main.py validar
+```
+
 ## Como executar
 
 Rodar a pipeline sem forcar incidente:
