@@ -9,6 +9,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from dataops_ai.agents.investigation_agent import InvestigationAgent
 from dataops_ai.agents.quality_agent import DataQualityAgent
 from dataops_ai.config import load_settings
 from dataops_ai.pipelines.extract import extract_bcb_series
@@ -69,16 +70,6 @@ def main() -> None:
     agent = DataQualityAgent(settings.gemini_api_key, settings.gemini_model)
     diagnosis = agent.diagnose(quality_report, context)
 
-    output = {
-        "quality_report": quality_report.model_dump(mode="json"),
-        "diagnosis": diagnosis.model_dump(mode="json"),
-        "diagnosis_engine": agent.engine_used,
-    }
-
-    settings.curated_dir.mkdir(parents=True, exist_ok=True)
-    report_path = settings.curated_dir / "quality_diagnosis.json"
-    report_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-
     write_pipeline_log(
         settings.logs_dir,
         "pipeline_finished",
@@ -90,7 +81,23 @@ def main() -> None:
         },
     )
 
-    print(_format_terminal_report(scenario, rows_loaded, quality_report, diagnosis, agent.engine_used))
+    investigation = InvestigationAgent(settings.database_url, settings.logs_dir).investigate(
+        quality_report,
+        diagnosis,
+    )
+
+    output = {
+        "quality_report": quality_report.model_dump(mode="json"),
+        "diagnosis": diagnosis.model_dump(mode="json"),
+        "diagnosis_engine": agent.engine_used,
+        "investigation": investigation.model_dump(mode="json"),
+    }
+
+    settings.curated_dir.mkdir(parents=True, exist_ok=True)
+    report_path = settings.curated_dir / "quality_diagnosis.json"
+    report_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(_format_terminal_report(scenario, rows_loaded, quality_report, diagnosis, agent.engine_used, investigation))
     print(f"\nRelatorio salvo em: {report_path}")
 
 
@@ -125,7 +132,7 @@ def _scenario_label(scenario: str) -> str:
     labels = {
         "none": "sem incidente",
         "scenario_01_null_values": "valores nulos",
-        "scenario_02_schema_drift": "mudanca de schema",
+        "scenario_02_schema_drift": "mudanca de estrutura",
         "scenario_03_api_timeout": "timeout na API",
         "scenario_04_duplicate_records": "registros duplicados",
         "scenario_05_invalid_type": "tipo invalido",
@@ -133,7 +140,14 @@ def _scenario_label(scenario: str) -> str:
     return labels.get(scenario, scenario)
 
 
-def _format_terminal_report(scenario: str, rows_loaded: int, quality_report, diagnosis, engine_used: str) -> str:
+def _format_terminal_report(
+    scenario: str,
+    rows_loaded: int,
+    quality_report,
+    diagnosis,
+    engine_used: str,
+    investigation,
+) -> str:
     severity_labels = {
         "low": "baixa",
         "medium": "media",
@@ -180,7 +194,29 @@ def _format_terminal_report(scenario: str, rows_loaded: int, quality_report, dia
     lines.extend(f"- {_humanize_terminal_text(action)}" for action in diagnosis.recommended_actions)
 
     if diagnosis.needs_investigation_agent:
-        lines.append("\nProximo passo sugerido: mandar para o agente de investigacao na V2.")
+        lines.append("\nInvestigacao inicial acionada nesta execucao.")
+
+    lines.extend(
+        [
+            "",
+            "Investigacao:",
+            _humanize_terminal_text(investigation.summary),
+            "",
+            "Evidencias:",
+        ]
+    )
+    lines.extend(f"- {_humanize_terminal_text(_replace_internal_labels(item))}" for item in investigation.evidence)
+
+    lines.extend(
+        [
+            "",
+            "Hipotese:",
+            _humanize_terminal_text(investigation.hypothesis),
+            "",
+            "Acoes sugeridas pela investigacao:",
+        ]
+    )
+    lines.extend(f"- {_humanize_terminal_text(item)}" for item in investigation.next_steps)
 
     return "\n".join(lines)
 
@@ -224,6 +260,23 @@ def _humanize_terminal_text(text: str) -> str:
         "scenario_05_invalid_type": "tipo_invalido",
     }
     clean = _plain_terminal_text(text)
+    for old, new in replacements.items():
+        clean = clean.replace(old, new)
+    return clean
+
+
+def _replace_internal_labels(text: str) -> str:
+    replacements = {
+        "check_nulls": "nulos",
+        "check_duplicates": "duplicados",
+        "check_schema": "estrutura",
+        "check_anomalies": "anomalias",
+        "value": "valor",
+        "date": "data",
+        "series_code": "codigo da serie",
+        "source": "origem",
+    }
+    clean = text
     for old, new in replacements.items():
         clean = clean.replace(old, new)
     return clean

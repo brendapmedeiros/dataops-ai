@@ -72,7 +72,7 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
                     status="fail",
                     column=column,
                     rows_affected=len(df),
-                    details=f"A coluna esperada {_column_label(column)} nao existe no dataset.",
+                    details=f"A coluna esperada {_column_label(column)} nao existe na base.",
                 )
             )
             continue

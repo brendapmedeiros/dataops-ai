@@ -36,3 +36,11 @@ class AgentDiagnosis(BaseModel):
     probable_causes: list[str]
     recommended_actions: list[str]
     needs_investigation_agent: bool
+
+
+class InvestigationReport(BaseModel):
+    agent_name: str
+    summary: str
+    evidence: list[str]
+    hypothesis: str
+    next_steps: list[str]
