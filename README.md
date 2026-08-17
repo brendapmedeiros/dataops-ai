@@ -23,6 +23,22 @@ BCB API -> Extraction -> Transform -> Banco -> Data Quality -> Agent Orchestrato
 
 Para manter custo zero e facilitar estudo durante a primeira versao. A camada de banco foi isolada para permitir trocar para PostgreSQL depois sem reescrever o pipeline.
 
+## Setup local
+
+```bash
+cd "C:\Users\brend\Desktop\DataOps AI"
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Para validar:
+
+```bash
+python -m unittest discover -s tests
+```
+
 ## Como rodar
 
 ```bash

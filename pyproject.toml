@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dataops-ai"
+version = "0.1.0"
+description = "Mini plataforma de DataOps com agentes para diagnosticar incidentes em pipelines de dados."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy<2",
+    "pandas>=2.2,<3",
+    "pydantic>=2.7,<3",
+    "requests>=2.31,<3",
+    "sqlalchemy>=2,<3",
+    "psycopg2-binary>=2.9,<3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
