@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 from dataops_ai.agents.investigation_agent import InvestigationAgent
 from dataops_ai.agents.quality_agent import DataQualityAgent
@@ -21,8 +22,9 @@ class AgentOrchestrator:
         self.settings = settings
 
     def run(self, scenario: str, scenario_label: str) -> PipelineRunResult:
-        write_pipeline_log(self.settings.logs_dir, "pipeline_started", {"scenario": scenario})
-        raw_rows = self._extract(scenario)
+        run_id = _new_run_id()
+        write_pipeline_log(self.settings.logs_dir, "pipeline_started", {"run_id": run_id, "scenario": scenario})
+        raw_rows = self._extract(scenario, run_id)
         transformed = transform_bcb_payload(raw_rows, self.settings.bcb_series_code)
         staged = apply_scenario(transformed, scenario)
 
@@ -37,6 +39,7 @@ class AgentOrchestrator:
             quality_report,
             {
                 "scenario": scenario,
+                "run_id": run_id,
                 "rows_loaded": rows_loaded,
                 "last_pipeline_run": get_last_pipeline_run(self.settings.logs_dir),
             },
@@ -46,6 +49,7 @@ class AgentOrchestrator:
             self.settings.logs_dir,
             "pipeline_finished",
             {
+                "run_id": run_id,
                 "scenario": scenario,
                 "rows_loaded": rows_loaded,
                 "failed_checks": len(quality_report.failed_checks),
@@ -57,6 +61,7 @@ class AgentOrchestrator:
             quality_report,
             diagnosis,
             scenario,
+            run_id,
         )
         resolution = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
 
@@ -64,6 +69,7 @@ class AgentOrchestrator:
         diagnosis_report_path = self.settings.curated_dir / "quality_diagnosis.json"
         incident_report_path = create_incident_report(
             self.settings.curated_dir,
+            run_id,
             scenario_label,
             quality_report,
             diagnosis,
@@ -73,6 +79,7 @@ class AgentOrchestrator:
         diagnosis_report_path.write_text(
             json.dumps(
                 {
+                    "run_id": run_id,
                     "quality_report": quality_report.model_dump(mode="json"),
                     "diagnosis": diagnosis.model_dump(mode="json"),
                     "diagnosis_engine": quality_agent.engine_used,
@@ -86,6 +93,7 @@ class AgentOrchestrator:
         )
         history_path = append_incident_history(
             self.settings.curated_dir,
+            run_id,
             scenario_label,
             quality_report,
             diagnosis,
@@ -96,6 +104,7 @@ class AgentOrchestrator:
         )
 
         return PipelineRunResult(
+            run_id=run_id,
             scenario=scenario,
             rows_loaded=rows_loaded,
             diagnosis_engine=quality_agent.engine_used,
@@ -108,7 +117,7 @@ class AgentOrchestrator:
             history_path=str(history_path),
         )
 
-    def _extract(self, scenario: str) -> list[dict]:
+    def _extract(self, scenario: str, run_id: str) -> list[dict]:
         force_api_timeout = scenario == "scenario_03_api_timeout"
         raw_rows = extract_bcb_series(
             series_code=self.settings.bcb_series_code,
@@ -123,6 +132,7 @@ class AgentOrchestrator:
                 self.settings.logs_dir,
                 "api_fallback_used",
                 {
+                    "run_id": run_id,
                     "scenario": scenario,
                     "source": extraction_source,
                     "reason": "timeout simulado" if force_api_timeout else "falha na coleta",
@@ -130,3 +140,7 @@ class AgentOrchestrator:
                 },
             )
         return raw_rows
+
+
+def _new_run_id() -> str:
+    return datetime.now(UTC).strftime("%Y%m%d%H%M%S%f")

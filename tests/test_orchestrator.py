@@ -26,6 +26,7 @@ class AgentOrchestratorTest(unittest.TestCase):
 
             result = AgentOrchestrator(settings).run("none", "sem incidente")
 
+            self.assertTrue(result.run_id)
             self.assertGreater(result.rows_loaded, 0)
             self.assertEqual(result.diagnosis_engine, "regras_locais")
             self.assertTrue(Path(result.diagnosis_report_path).exists())

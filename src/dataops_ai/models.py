@@ -56,6 +56,7 @@ class ResolutionPlan(BaseModel):
 
 
 class PipelineRunResult(BaseModel):
+    run_id: str
     scenario: str
     rows_loaded: int
     diagnosis_engine: str

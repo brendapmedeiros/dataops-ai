@@ -39,6 +39,7 @@ class ResolutionAgentTest(unittest.TestCase):
                 quality_report,
                 diagnosis,
                 "registros_duplicados",
+                "run_test_001",
             )
 
             plan = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
@@ -63,18 +64,24 @@ class ResolutionAgentTest(unittest.TestCase):
             )
 
             load_timeseries(df, database_url)
-            write_pipeline_log(logs_dir, "api_fallback_used", {"source": "local_fallback"})
+            write_pipeline_log(
+                logs_dir,
+                "api_fallback_used",
+                {"scenario": "timeout_api", "run_id": "run_test_001", "source": "local_fallback"},
+            )
             quality_report = run_quality_checks(df)
             diagnosis = DataQualityAgent(None, "gemini-flash-latest").diagnose(quality_report, {})
             investigation = InvestigationAgent(database_url, logs_dir).investigate(
                 quality_report,
                 diagnosis,
                 "timeout_api",
+                "run_test_001",
             )
             resolution = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
 
             report_path = create_incident_report(
                 output_dir,
+                "run_test_001",
                 "timeout na API",
                 quality_report,
                 diagnosis,
@@ -107,11 +114,13 @@ class ResolutionAgentTest(unittest.TestCase):
                 quality_report,
                 diagnosis,
                 "sem_incidente",
+                "run_test_001",
             )
             resolution = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
 
             history_path = append_incident_history(
                 output_dir,
+                "run_test_001",
                 "sem incidente",
                 quality_report,
                 diagnosis,
@@ -124,6 +133,7 @@ class ResolutionAgentTest(unittest.TestCase):
 
             self.assertTrue(history_path.exists())
             self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["run_id"], "run_test_001")
             self.assertEqual(records[0]["scenario"], "sem incidente")
 
 

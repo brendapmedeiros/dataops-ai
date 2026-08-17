@@ -9,6 +9,7 @@ from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport
 
 def create_incident_report(
     output_dir: Path,
+    run_id: str,
     scenario: str,
     quality_report: QualityReport,
     diagnosis: AgentDiagnosis,
@@ -18,7 +19,7 @@ def create_incident_report(
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / "incident_report.md"
     report_path.write_text(
-        _format_report(scenario, quality_report, diagnosis, investigation, resolution),
+        _format_report(run_id, scenario, quality_report, diagnosis, investigation, resolution),
         encoding="utf-8",
     )
     return report_path
@@ -26,6 +27,7 @@ def create_incident_report(
 
 def append_incident_history(
     output_dir: Path,
+    run_id: str,
     scenario: str,
     quality_report: QualityReport,
     diagnosis: AgentDiagnosis,
@@ -37,6 +39,7 @@ def append_incident_history(
     output_dir.mkdir(parents=True, exist_ok=True)
     history_path = output_dir / "incident_history.jsonl"
     record = {
+        "run_id": run_id,
         "recorded_at": datetime.now(UTC).isoformat(),
         "scenario": scenario,
         "dataset": quality_report.dataset_name,
@@ -64,6 +67,7 @@ def read_incident_history(output_dir: Path, limit: int = 10) -> list[dict]:
 
 
 def _format_report(
+    run_id: str,
     scenario: str,
     quality_report: QualityReport,
     diagnosis: AgentDiagnosis,
@@ -74,6 +78,7 @@ def _format_report(
     lines = [
         "# Relatorio de incidente",
         "",
+        f"- Run id: {run_id}",
         f"- Cenario: {scenario}",
         f"- Base: {quality_report.dataset_name}",
         f"- Linhas avaliadas: {quality_report.total_rows}",

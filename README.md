@@ -46,6 +46,7 @@ O cenario `timeout_api` simula uma falha na coleta, usa fallback local e registr
 ## Historico
 
 Cada execucao salva um resumo em `data/curated/incident_history.jsonl`.
+Cada registro recebe um `run_id`, usado para ligar logs, diagnostico, investigacao e relatorio da mesma execucao.
 
 ```bash
 python main.py historico

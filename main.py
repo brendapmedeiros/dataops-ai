@@ -80,6 +80,7 @@ def _format_history(records: list[dict]) -> str:
         manual_review = "sim" if record.get("requires_manual_review") else "nao"
         lines.append(
             "- "
+            f"{record.get('run_id', 'sem run id')} | "
             f"{record.get('scenario', 'cenario desconhecido')} | "
             f"gravidade: {_severity_label(record.get('severity', ''))} | "
             f"falhas: {record.get('failed_checks', 0)} | "
@@ -135,6 +136,7 @@ def _format_terminal_report(result) -> str:
     lines = [
         "DataOps AI - diagnostico da execucao",
         "",
+        f"Run id: {result.run_id}",
         f"Cenario testado: {_scenario_label(result.scenario)}",
         f"Linhas carregadas: {result.rows_loaded}",
         f"Validacoes com falha: {len(failed_checks)}",

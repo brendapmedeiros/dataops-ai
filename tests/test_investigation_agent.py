@@ -39,6 +39,7 @@ class InvestigationAgentTest(unittest.TestCase):
                 quality_report,
                 diagnosis,
                 "valores_nulos",
+                "run_test_001",
             )
 
             self.assertEqual(report.agent_name, "InvestigationAgent")
@@ -66,6 +67,7 @@ class InvestigationAgentTest(unittest.TestCase):
                 "api_fallback_used",
                 {
                     "scenario": "timeout_api",
+                    "run_id": "run_test_001",
                     "source": "simulated_api_timeout_fallback",
                     "reason": "timeout simulado",
                     "rows_returned": len(df),
@@ -78,6 +80,7 @@ class InvestigationAgentTest(unittest.TestCase):
                 quality_report,
                 diagnosis,
                 "timeout_api",
+                "run_test_001",
             )
 
             self.assertIn("falha operacional", report.summary)

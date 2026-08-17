@@ -17,6 +17,7 @@ class InvestigationAgent:
         quality_report: QualityReport,
         diagnosis: AgentDiagnosis,
         scenario: str,
+        run_id: str,
         table_name: str = "bcb_timeseries",
     ) -> InvestigationReport:
         failed_checks = quality_report.failed_checks
@@ -24,7 +25,9 @@ class InvestigationAgent:
         api_fallback_logs = [
             log
             for log in logs
-            if log.get("event") == "api_fallback_used" and log.get("payload", {}).get("scenario") == scenario
+            if log.get("event") == "api_fallback_used"
+            and log.get("payload", {}).get("scenario") == scenario
+            and log.get("payload", {}).get("run_id") == run_id
         ][-1:]
         rows_in_database = self.database.count_rows(table_name)
         sample = self.database.query_database(f"select * from {table_name} limit 5")
@@ -32,6 +35,7 @@ class InvestigationAgent:
         evidence = [
             f"A base {table_name} tem {rows_in_database} linha(s) carregada(s) no banco.",
             f"A validacao encontrou {len(failed_checks)} falha(s) em {quality_report.total_rows} linha(s).",
+            f"Run id da execucao: {run_id}.",
             f"Foram encontrados {len(logs)} registro(s) recente(s) de execucao nos logs.",
         ]
 
