@@ -11,12 +11,14 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from dataops_ai.agents.investigation_agent import InvestigationAgent
 from dataops_ai.agents.quality_agent import DataQualityAgent
+from dataops_ai.agents.resolution_agent import ResolutionAgent
 from dataops_ai.config import load_settings
 from dataops_ai.pipelines.extract import extract_bcb_series
 from dataops_ai.pipelines.load import load_timeseries
 from dataops_ai.pipelines.transform import transform_bcb_payload
 from dataops_ai.scenarios import SCENARIOS, apply_scenario
 from dataops_ai.tools.log_tools import get_last_pipeline_run, write_pipeline_log
+from dataops_ai.tools.incident_tools import create_incident_report
 from dataops_ai.tools.quality_tools import run_quality_checks
 
 
@@ -99,21 +101,43 @@ def main() -> None:
     investigation = InvestigationAgent(settings.database_url, settings.logs_dir).investigate(
         quality_report,
         diagnosis,
+        scenario,
     )
+    resolution = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
 
     output = {
         "quality_report": quality_report.model_dump(mode="json"),
         "diagnosis": diagnosis.model_dump(mode="json"),
         "diagnosis_engine": agent.engine_used,
         "investigation": investigation.model_dump(mode="json"),
+        "resolution": resolution.model_dump(mode="json"),
     }
 
     settings.curated_dir.mkdir(parents=True, exist_ok=True)
     report_path = settings.curated_dir / "quality_diagnosis.json"
     report_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    incident_report_path = create_incident_report(
+        settings.curated_dir,
+        _scenario_label(scenario),
+        quality_report,
+        diagnosis,
+        investigation,
+        resolution,
+    )
 
-    print(_format_terminal_report(scenario, rows_loaded, quality_report, diagnosis, agent.engine_used, investigation))
+    print(
+        _format_terminal_report(
+            scenario,
+            rows_loaded,
+            quality_report,
+            diagnosis,
+            agent.engine_used,
+            investigation,
+            resolution,
+        )
+    )
     print(f"\nRelatorio salvo em: {report_path}")
+    print(f"Relatorio de incidente salvo em: {incident_report_path}")
 
 
 def _normalize_scenario(raw_scenario: str) -> str:
@@ -162,6 +186,7 @@ def _format_terminal_report(
     diagnosis,
     engine_used: str,
     investigation,
+    resolution,
 ) -> str:
     severity_labels = {
         "low": "baixa",
@@ -232,6 +257,21 @@ def _format_terminal_report(
         ]
     )
     lines.extend(f"- {_humanize_terminal_text(item)}" for item in investigation.next_steps)
+
+    lines.extend(
+        [
+            "",
+            "Resolucao:",
+            _humanize_terminal_text(resolution.summary),
+            "",
+            "Impacto:",
+            _humanize_terminal_text(resolution.impact),
+            "",
+            "Correcoes sugeridas:",
+        ]
+    )
+    lines.extend(f"- {_humanize_terminal_text(item)}" for item in resolution.correction_steps)
+    lines.extend(["", f"Precisa de revisao manual: {'sim' if resolution.requires_manual_review else 'nao'}"])
 
     return "\n".join(lines)
 

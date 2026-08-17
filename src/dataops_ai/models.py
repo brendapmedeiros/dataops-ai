@@ -44,3 +44,12 @@ class InvestigationReport(BaseModel):
     evidence: list[str]
     hypothesis: str
     next_steps: list[str]
+
+
+class ResolutionPlan(BaseModel):
+    agent_name: str
+    summary: str
+    impact: str
+    correction_steps: list[str]
+    prevention_steps: list[str]
+    requires_manual_review: bool

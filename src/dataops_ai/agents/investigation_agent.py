@@ -16,11 +16,16 @@ class InvestigationAgent:
         self,
         quality_report: QualityReport,
         diagnosis: AgentDiagnosis,
+        scenario: str,
         table_name: str = "bcb_timeseries",
     ) -> InvestigationReport:
         failed_checks = quality_report.failed_checks
         logs = read_pipeline_logs(self.logs_dir, limit=5)
-        api_fallback_logs = [log for log in logs if log.get("event") == "api_fallback_used"][-1:]
+        api_fallback_logs = [
+            log
+            for log in logs
+            if log.get("event") == "api_fallback_used" and log.get("payload", {}).get("scenario") == scenario
+        ][-1:]
         rows_in_database = self.database.count_rows(table_name)
         sample = self.database.query_database(f"select * from {table_name} limit 5")
 
