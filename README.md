@@ -212,6 +212,8 @@ Listar execucoes recentes:
 python main.py historico
 ```
 
+Com PostgreSQL configurado, o comando consulta a tabela `incident_history`. Se a tabela ainda nao existir, usa o arquivo `data/curated/incident_history.jsonl`.
+
 Exemplo de saida:
 
 ```text

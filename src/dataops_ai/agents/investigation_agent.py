@@ -183,6 +183,6 @@ def _has_missing_column_issue(quality_report: QualityReport) -> bool:
 
 def _has_type_issue(quality_report: QualityReport) -> bool:
     return any(
-        issue.check_name == "check_schema" and "Esperado:" in issue.details
+        issue.check_name == "check_types"
         for issue in quality_report.failed_checks
     )

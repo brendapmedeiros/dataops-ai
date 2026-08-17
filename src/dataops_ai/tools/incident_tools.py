@@ -98,7 +98,27 @@ def read_incident_history(output_dir: Path, limit: int = 10) -> list[dict]:
         return []
 
     lines = [line for line in history_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    return [json.loads(line) for line in lines[-limit:]]
+    return [json.loads(line) for line in lines[-_normalize_limit(limit):]]
+
+
+def read_incident_history_from_database(
+    database_url: str,
+    limit: int = 10,
+    table_name: str = "incident_history",
+) -> list[dict]:
+    database = DatabaseClient(database_url)
+    if not database.table_exists(table_name):
+        return []
+
+    safe_limit = _normalize_limit(limit)
+    query = (
+        "select run_id, recorded_at, scenario, dataset, rows_checked, failed_checks, "
+        "severity, diagnosis_engine, requires_manual_review, summary, "
+        "diagnosis_report_path, incident_report_path "
+        f"from {table_name} order by recorded_at desc limit {safe_limit}"
+    )
+    rows = database.query_database(query)
+    return rows.to_dict(orient="records")
 
 
 def _format_report(
@@ -173,6 +193,7 @@ def _humanize(text: str) -> str:
         "check_nulls": "nulos",
         "check_duplicates": "duplicados",
         "check_schema": "estrutura",
+        "check_types": "tipo",
         "check_anomalies": "anomalias",
         "date": "data",
         "value": "valor",
@@ -183,3 +204,7 @@ def _humanize(text: str) -> str:
     for old, new in replacements.items():
         clean = clean.replace(old, new)
     return clean
+
+
+def _normalize_limit(limit: int) -> int:
+    return max(1, int(limit))

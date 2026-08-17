@@ -64,7 +64,7 @@ def check_duplicates(df: pd.DataFrame, subset: list[str]) -> QualityIssue:
 
 def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[QualityIssue]:
     issues: list[QualityIssue] = []
-    for column, expected_type in expected_schema.items():
+    for column in expected_schema:
         if column not in df.columns:
             issues.append(
                 QualityIssue(
@@ -75,12 +75,18 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
                     details=f"A coluna esperada {_column_label(column)} nao existe na base.",
                 )
             )
-            continue
+    return issues
 
+
+def check_types(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[QualityIssue]:
+    issues: list[QualityIssue] = []
+    for column, expected_type in expected_schema.items():
+        if column not in df.columns:
+            continue
         actual_type = _semantic_dtype(df[column])
         issues.append(
             QualityIssue(
-                check_name="check_schema",
+                check_name="check_types",
                 status="pass" if actual_type == expected_type else "fail",
                 column=column,
                 details=f"Esperado: {_type_label(expected_type)}. Encontrado: {_type_label(actual_type)}.",
@@ -90,7 +96,8 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
 
 
 def compare_schema(df: pd.DataFrame, expected_schema: dict[str, str] | None = None) -> list[QualityIssue]:
-    return check_schema(df, expected_schema or EXPECTED_SCHEMA)
+    schema = expected_schema or EXPECTED_SCHEMA
+    return [*check_schema(df, schema), *check_types(df, schema)]
 
 
 def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIssue:
@@ -119,7 +126,7 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
 
 def run_quality_checks(df: pd.DataFrame, dataset_name: str = "bcb_timeseries") -> QualityReport:
     issues: list[QualityIssue] = []
-    issues.extend(check_schema(df, EXPECTED_SCHEMA))
+    issues.extend(compare_schema(df, EXPECTED_SCHEMA))
     issues.extend(check_nulls(df, ["date", "value", "series_code"]))
     issues.append(check_duplicates(df, ["date", "series_code"]))
     issues.append(check_anomalies(df, "value"))

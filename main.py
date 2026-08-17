@@ -13,7 +13,7 @@ from dataops_ai.config import load_settings
 from dataops_ai.scenarios import SCENARIOS
 from dataops_ai.tools.api_tools import get_api_status
 from dataops_ai.tools.database_tools import DatabaseClient
-from dataops_ai.tools.incident_tools import read_incident_history
+from dataops_ai.tools.incident_tools import read_incident_history, read_incident_history_from_database
 
 
 SCENARIO_ALIASES = {
@@ -44,7 +44,7 @@ def main() -> None:
 
     settings = load_settings(PROJECT_ROOT)
     if args.command in {"history", "historico"}:
-        print(_format_history(read_incident_history(settings.curated_dir, limit=args.limit)))
+        print(_format_history(_read_history(settings, args.limit)))
         return
 
     if args.command in {"database", "banco"}:
@@ -100,6 +100,18 @@ def _format_history(records: list[dict]) -> str:
             f"revisao manual: {manual_review}"
         )
     return _plain_terminal_text("\n".join(lines))
+
+
+def _read_history(settings, limit: int) -> list[dict]:
+    try:
+        records = read_incident_history_from_database(settings.database_url, limit=limit)
+    except RuntimeError:
+        records = []
+
+    if records:
+        return records
+
+    return read_incident_history(settings.curated_dir, limit=limit)
 
 
 def _format_database_check(database_url: str) -> str:
@@ -259,6 +271,7 @@ def _check_label(check_name: str) -> str:
         "check_nulls": "nulos",
         "check_duplicates": "duplicados",
         "check_schema": "estrutura",
+        "check_types": "tipo",
         "check_anomalies": "anomalias",
     }
     return labels.get(check_name, check_name)
@@ -305,6 +318,7 @@ def _replace_internal_labels(text: str) -> str:
         "check_nulls": "nulos",
         "check_duplicates": "duplicados",
         "check_schema": "estrutura",
+        "check_types": "tipo",
         "check_anomalies": "anomalias",
         "value": "valor",
         "date": "data",

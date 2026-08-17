@@ -21,9 +21,12 @@ class DatabaseToolsTest(unittest.TestCase):
             database_url = f"sqlite:///{Path(temp_dir) / 'test.db'}"
             database = DatabaseClient(database_url)
 
+            self.assertFalse(database.table_exists("incident_history"))
+
             database.append_record({"run_id": "run_001", "failed_checks": 0}, "incident_history")
             database.append_record({"run_id": "run_002", "failed_checks": 1}, "incident_history")
 
+            self.assertTrue(database.table_exists("incident_history"))
             self.assertEqual(database.count_rows("incident_history"), 2)
 
 

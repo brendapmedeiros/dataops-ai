@@ -67,6 +67,25 @@ class DatabaseClient:
         except Exception as exc:
             raise RuntimeError(_database_error_message(self.database_url)) from exc
 
+    def table_exists(self, table_name: str) -> bool:
+        _validate_table_name(table_name)
+        if self.database_url.startswith("sqlite:///"):
+            db_path = Path(self.database_url.removeprefix("sqlite:///"))
+            with sqlite3.connect(db_path) as connection:
+                cursor = connection.execute(
+                    "select 1 from sqlite_master where type = 'table' and name = ?",
+                    (table_name,),
+                )
+                return cursor.fetchone() is not None
+
+        from sqlalchemy import create_engine, inspect
+
+        engine = create_engine(self.database_url)
+        try:
+            return inspect(engine).has_table(table_name)
+        except Exception as exc:
+            raise RuntimeError(_database_error_message(self.database_url)) from exc
+
     def query_database(self, sql: str) -> pd.DataFrame:
         if self.database_url.startswith("sqlite:///"):
             db_path = Path(self.database_url.removeprefix("sqlite:///"))

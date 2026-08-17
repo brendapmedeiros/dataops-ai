@@ -12,7 +12,13 @@ from dataops_ai.agents.investigation_agent import InvestigationAgent
 from dataops_ai.agents.quality_agent import DataQualityAgent
 from dataops_ai.agents.resolution_agent import ResolutionAgent
 from dataops_ai.pipelines.load import load_timeseries
-from dataops_ai.tools.incident_tools import append_incident_history, create_incident_report, read_incident_history
+from dataops_ai.tools.incident_tools import (
+    append_incident_history,
+    create_incident_report,
+    read_incident_history,
+    read_incident_history_from_database,
+    save_incident_history_record,
+)
 from dataops_ai.tools.log_tools import write_pipeline_log
 from dataops_ai.tools.quality_tools import run_quality_checks
 
@@ -165,6 +171,38 @@ class ResolutionAgentTest(unittest.TestCase):
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0]["run_id"], "run_test_001")
             self.assertEqual(records[0]["scenario"], "sem incidente")
+
+    def test_incident_history_is_read_from_database(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            database_url = f"sqlite:///{Path(temp_dir) / 'test.db'}"
+            first_record = {
+                "run_id": "run_test_001",
+                "recorded_at": "2024-01-01T00:00:00+00:00",
+                "scenario": "sem incidente",
+                "dataset": "bcb_timeseries",
+                "rows_checked": 2,
+                "failed_checks": 0,
+                "severity": "low",
+                "diagnosis_engine": "regras_locais",
+                "requires_manual_review": False,
+                "summary": "execucao ok",
+                "diagnosis_report_path": "quality_diagnosis.json",
+                "incident_report_path": "incident_report.md",
+            }
+            second_record = {
+                **first_record,
+                "run_id": "run_test_002",
+                "recorded_at": "2024-01-02T00:00:00+00:00",
+                "failed_checks": 1,
+            }
+
+            save_incident_history_record(database_url, first_record)
+            save_incident_history_record(database_url, second_record)
+
+            records = read_incident_history_from_database(database_url, limit=1)
+
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["run_id"], "run_test_002")
 
 
 if __name__ == "__main__":
