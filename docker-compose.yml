@@ -16,6 +16,18 @@ services:
       postgres:
         condition: service_healthy
 
+  dashboard:
+    build:
+      context: .
+    container_name: dataops_ai_dashboard
+    environment:
+      DATAOPS_API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    command: streamlit run dashboard/app.py --server.address 0.0.0.0 --server.port 8501
+
   postgres:
     image: postgres:16
     container_name: dataops_ai_postgres

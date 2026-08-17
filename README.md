@@ -45,6 +45,7 @@ BCB API
 - SQLAlchemy
 - Gemini API
 - FastAPI
+- Streamlit
 - unittest
 - Git/GitHub
 
@@ -80,6 +81,7 @@ data/
   processed/
   curated/
 
+dashboard/
 logs/
 tests/
 main.py
@@ -165,6 +167,18 @@ A API fica disponivel em:
 
 ```text
 http://127.0.0.1:8000
+```
+
+Subir PostgreSQL, API e dashboard:
+
+```bash
+docker compose up --build dashboard
+```
+
+O dashboard fica disponivel em:
+
+```text
+http://127.0.0.1:8501
 ```
 
 ## Como executar
@@ -291,5 +305,4 @@ Gera plano de resolucao com impacto, correcoes sugeridas, acoes preventivas e in
 
 ## Roadmap
 
-- Dashboard para visualizacao de execucoes e incidentes.
 - Expansao das regras de qualidade e contratos de schema.
