@@ -11,6 +11,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from dataops_ai.agents.orchestrator import AgentOrchestrator
 from dataops_ai.config import load_settings
 from dataops_ai.scenarios import SCENARIOS
+from dataops_ai.tools.incident_tools import read_incident_history
 
 
 SCENARIO_ALIASES = {
@@ -27,16 +28,21 @@ SCENARIO_ALIASES = {
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DataOps AI V1")
-    parser.add_argument("command", choices=["run", "rodar", "scenarios", "cenarios"])
+    parser.add_argument("command", choices=["run", "rodar", "scenarios", "cenarios", "history", "historico"])
     parser.add_argument("--scenario", default="sem_incidente")
+    parser.add_argument("--limit", type=int, default=5)
     args = parser.parse_args()
 
     if args.command in {"scenarios", "cenarios"}:
         print(_format_scenarios())
         return
 
-    scenario = _normalize_scenario(args.scenario)
     settings = load_settings(PROJECT_ROOT)
+    if args.command in {"history", "historico"}:
+        print(_format_history(read_incident_history(settings.curated_dir, limit=args.limit)))
+        return
+
+    scenario = _normalize_scenario(args.scenario)
     result = AgentOrchestrator(settings).run(scenario, _scenario_label(scenario))
 
     print(
@@ -46,6 +52,7 @@ def main() -> None:
     )
     print(f"\nRelatorio salvo em: {result.diagnosis_report_path}")
     print(f"Relatorio de incidente salvo em: {result.incident_report_path}")
+    print(f"Historico atualizado em: {result.history_path}")
 
 
 def _normalize_scenario(raw_scenario: str) -> str:
@@ -61,6 +68,23 @@ def _format_scenarios() -> str:
     lines = ["Cenarios disponiveis:"]
     for alias, description in _public_scenario_labels().items():
         lines.append(f"- {alias}: {description}")
+    return _plain_terminal_text("\n".join(lines))
+
+
+def _format_history(records: list[dict]) -> str:
+    if not records:
+        return "Nenhum historico encontrado ainda."
+
+    lines = ["Historico recente de incidentes:"]
+    for record in records:
+        manual_review = "sim" if record.get("requires_manual_review") else "nao"
+        lines.append(
+            "- "
+            f"{record.get('scenario', 'cenario desconhecido')} | "
+            f"gravidade: {_severity_label(record.get('severity', ''))} | "
+            f"falhas: {record.get('failed_checks', 0)} | "
+            f"revisao manual: {manual_review}"
+        )
     return _plain_terminal_text("\n".join(lines))
 
 
@@ -87,13 +111,17 @@ def _scenario_label(scenario: str) -> str:
     return labels.get(scenario, scenario)
 
 
-def _format_terminal_report(result) -> str:
-    severity_labels = {
+def _severity_label(severity: str) -> str:
+    labels = {
         "low": "baixa",
         "medium": "media",
         "high": "alta",
         "critical": "critica",
     }
+    return labels.get(severity, severity)
+
+
+def _format_terminal_report(result) -> str:
     engine_labels = {
         "gemini": "Gemini",
         "regras_locais": "regras locais",
@@ -110,7 +138,7 @@ def _format_terminal_report(result) -> str:
         f"Cenario testado: {_scenario_label(result.scenario)}",
         f"Linhas carregadas: {result.rows_loaded}",
         f"Validacoes com falha: {len(failed_checks)}",
-        f"Gravidade: {severity_labels.get(diagnosis.severity, diagnosis.severity)}",
+        f"Gravidade: {_severity_label(diagnosis.severity)}",
         f"Motor do diagnostico: {engine_labels.get(result.diagnosis_engine, result.diagnosis_engine)}",
         "",
     ]

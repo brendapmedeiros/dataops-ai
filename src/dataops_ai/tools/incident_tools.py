@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport, ResolutionPlan
@@ -20,6 +22,45 @@ def create_incident_report(
         encoding="utf-8",
     )
     return report_path
+
+
+def append_incident_history(
+    output_dir: Path,
+    scenario: str,
+    quality_report: QualityReport,
+    diagnosis: AgentDiagnosis,
+    diagnosis_engine: str,
+    resolution: ResolutionPlan,
+    diagnosis_report_path: str,
+    incident_report_path: str,
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    history_path = output_dir / "incident_history.jsonl"
+    record = {
+        "recorded_at": datetime.now(UTC).isoformat(),
+        "scenario": scenario,
+        "dataset": quality_report.dataset_name,
+        "rows_checked": quality_report.total_rows,
+        "failed_checks": len(quality_report.failed_checks),
+        "severity": diagnosis.severity,
+        "diagnosis_engine": diagnosis_engine,
+        "requires_manual_review": resolution.requires_manual_review,
+        "summary": resolution.summary,
+        "diagnosis_report_path": diagnosis_report_path,
+        "incident_report_path": incident_report_path,
+    }
+    with history_path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return history_path
+
+
+def read_incident_history(output_dir: Path, limit: int = 10) -> list[dict]:
+    history_path = output_dir / "incident_history.jsonl"
+    if not history_path.exists():
+        return []
+
+    lines = [line for line in history_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [json.loads(line) for line in lines[-limit:]]
 
 
 def _format_report(

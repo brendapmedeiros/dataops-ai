@@ -43,6 +43,14 @@ python main.py rodar --scenario timeout_api
 
 O cenario `timeout_api` simula uma falha na coleta, usa fallback local e registra isso nos logs para o agente de investigacao analisar.
 
+## Historico
+
+Cada execucao salva um resumo em `data/curated/incident_history.jsonl`.
+
+```bash
+python main.py historico
+```
+
 ## Gemini
 
 Crie `.env` a partir de `.env.example` e preencha `GEMINI_API_KEY`. Sem chave, o agente usa diagnostico local por regras.

@@ -65,3 +65,4 @@ class PipelineRunResult(BaseModel):
     resolution: ResolutionPlan
     diagnosis_report_path: str
     incident_report_path: str
+    history_path: str

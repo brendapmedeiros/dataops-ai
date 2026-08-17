@@ -30,6 +30,7 @@ class AgentOrchestratorTest(unittest.TestCase):
             self.assertEqual(result.diagnosis_engine, "regras_locais")
             self.assertTrue(Path(result.diagnosis_report_path).exists())
             self.assertTrue(Path(result.incident_report_path).exists())
+            self.assertTrue(Path(result.history_path).exists())
 
 
 if __name__ == "__main__":
