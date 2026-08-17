@@ -44,6 +44,7 @@ BCB API
 - SQLite
 - SQLAlchemy
 - Gemini API
+- FastAPI
 - unittest
 - Git/GitHub
 
@@ -70,6 +71,7 @@ src/dataops_ai/
     quality_tools.py
 
   config.py
+  api.py
   models.py
   scenarios.py
 
@@ -153,6 +155,18 @@ Rodar uma validacao rapida do core:
 python main.py validar
 ```
 
+Subir PostgreSQL e API juntos pelo Docker:
+
+```bash
+docker compose up --build api
+```
+
+A API fica disponivel em:
+
+```text
+http://127.0.0.1:8000
+```
+
 ## Como executar
 
 Rodar a pipeline sem forcar incidente:
@@ -175,6 +189,36 @@ python main.py rodar --scenario mudanca_estrutura
 python main.py rodar --scenario registros_duplicados
 python main.py rodar --scenario tipo_invalido
 python main.py rodar --scenario timeout_api
+```
+
+## API local
+
+Subir a API:
+
+```bash
+uvicorn dataops_ai.api:app --reload
+```
+
+Ou pelo Docker Compose:
+
+```bash
+docker compose up --build api
+```
+
+Endpoints principais:
+
+```text
+GET  /saude
+GET  /status
+GET  /cenarios
+GET  /historico
+POST /execucoes
+```
+
+Exemplo de execucao pela API:
+
+```bash
+curl -X POST http://127.0.0.1:8000/execucoes -H "Content-Type: application/json" -d "{\"scenario\":\"tipo_invalido\"}"
 ```
 
 ## Cenarios simulados
@@ -247,7 +291,5 @@ Gera plano de resolucao com impacto, correcoes sugeridas, acoes preventivas e in
 
 ## Roadmap
 
-- API com FastAPI para disparar execucoes e consultar historico.
-- Docker Compose com aplicacao e banco.
 - Dashboard para visualizacao de execucoes e incidentes.
 - Expansao das regras de qualidade e contratos de schema.

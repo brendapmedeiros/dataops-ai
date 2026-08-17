@@ -1,0 +1,10 @@
+.env
+.venv
+.git
+__pycache__
+*.pyc
+*.db
+data/raw/*
+data/processed/*
+data/curated/*
+logs/*
