@@ -84,7 +84,7 @@ class DataQualityAgent:
             recommended_actions=[
                 "Olhar o arquivo bruto, o CSV transformado e os logs da pipeline.",
                 "Revisar os detalhes das validacoes antes de usar essa base em etapas seguintes.",
-                "Na V2, acionar o agente de investigacao quando a causa nao estiver clara.",
+                "Usar a investigacao desta execucao para confirmar a causa.",
             ],
             needs_investigation_agent=severity in {"high", "critical"},
         )

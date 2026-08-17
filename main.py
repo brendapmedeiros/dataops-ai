@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import unicodedata
 from pathlib import Path
@@ -9,17 +8,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from dataops_ai.agents.investigation_agent import InvestigationAgent
-from dataops_ai.agents.quality_agent import DataQualityAgent
-from dataops_ai.agents.resolution_agent import ResolutionAgent
+from dataops_ai.agents.orchestrator import AgentOrchestrator
 from dataops_ai.config import load_settings
-from dataops_ai.pipelines.extract import extract_bcb_series
-from dataops_ai.pipelines.load import load_timeseries
-from dataops_ai.pipelines.transform import transform_bcb_payload
-from dataops_ai.scenarios import SCENARIOS, apply_scenario
-from dataops_ai.tools.log_tools import get_last_pipeline_run, write_pipeline_log
-from dataops_ai.tools.incident_tools import create_incident_report
-from dataops_ai.tools.quality_tools import run_quality_checks
+from dataops_ai.scenarios import SCENARIOS
 
 
 SCENARIO_ALIASES = {
@@ -45,99 +36,16 @@ def main() -> None:
         return
 
     scenario = _normalize_scenario(args.scenario)
-
     settings = load_settings(PROJECT_ROOT)
-    write_pipeline_log(settings.logs_dir, "pipeline_started", {"scenario": scenario})
-    force_api_timeout = scenario == "scenario_03_api_timeout"
-
-    raw_rows = extract_bcb_series(
-        series_code=settings.bcb_series_code,
-        start_date=settings.bcb_start_date,
-        end_date=settings.bcb_end_date,
-        output_dir=settings.raw_dir,
-        force_timeout=force_api_timeout,
-    )
-    extraction_source = raw_rows[0].get("source", "unknown") if raw_rows else "empty"
-    if extraction_source != "bcb_api":
-        write_pipeline_log(
-            settings.logs_dir,
-            "api_fallback_used",
-            {
-                "scenario": scenario,
-                "source": extraction_source,
-                "reason": "timeout simulado" if force_api_timeout else "falha na coleta",
-                "rows_returned": len(raw_rows),
-            },
-        )
-
-    transformed = transform_bcb_payload(raw_rows, settings.bcb_series_code)
-    staged = apply_scenario(transformed, scenario)
-
-    settings.processed_dir.mkdir(parents=True, exist_ok=True)
-    processed_path = settings.processed_dir / "bcb_timeseries.csv"
-    staged.to_csv(processed_path, index=False)
-
-    rows_loaded = load_timeseries(staged, settings.database_url)
-    quality_report = run_quality_checks(staged)
-    context = {
-        "scenario": scenario,
-        "rows_loaded": rows_loaded,
-        "last_pipeline_run": get_last_pipeline_run(settings.logs_dir),
-    }
-    agent = DataQualityAgent(settings.gemini_api_key, settings.gemini_model)
-    diagnosis = agent.diagnose(quality_report, context)
-
-    write_pipeline_log(
-        settings.logs_dir,
-        "pipeline_finished",
-        {
-            "scenario": scenario,
-            "rows_loaded": rows_loaded,
-            "failed_checks": len(quality_report.failed_checks),
-            "severity": diagnosis.severity,
-        },
-    )
-
-    investigation = InvestigationAgent(settings.database_url, settings.logs_dir).investigate(
-        quality_report,
-        diagnosis,
-        scenario,
-    )
-    resolution = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
-
-    output = {
-        "quality_report": quality_report.model_dump(mode="json"),
-        "diagnosis": diagnosis.model_dump(mode="json"),
-        "diagnosis_engine": agent.engine_used,
-        "investigation": investigation.model_dump(mode="json"),
-        "resolution": resolution.model_dump(mode="json"),
-    }
-
-    settings.curated_dir.mkdir(parents=True, exist_ok=True)
-    report_path = settings.curated_dir / "quality_diagnosis.json"
-    report_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    incident_report_path = create_incident_report(
-        settings.curated_dir,
-        _scenario_label(scenario),
-        quality_report,
-        diagnosis,
-        investigation,
-        resolution,
-    )
+    result = AgentOrchestrator(settings).run(scenario, _scenario_label(scenario))
 
     print(
         _format_terminal_report(
-            scenario,
-            rows_loaded,
-            quality_report,
-            diagnosis,
-            agent.engine_used,
-            investigation,
-            resolution,
+            result,
         )
     )
-    print(f"\nRelatorio salvo em: {report_path}")
-    print(f"Relatorio de incidente salvo em: {incident_report_path}")
+    print(f"\nRelatorio salvo em: {result.diagnosis_report_path}")
+    print(f"Relatorio de incidente salvo em: {result.incident_report_path}")
 
 
 def _normalize_scenario(raw_scenario: str) -> str:
@@ -179,15 +87,7 @@ def _scenario_label(scenario: str) -> str:
     return labels.get(scenario, scenario)
 
 
-def _format_terminal_report(
-    scenario: str,
-    rows_loaded: int,
-    quality_report,
-    diagnosis,
-    engine_used: str,
-    investigation,
-    resolution,
-) -> str:
+def _format_terminal_report(result) -> str:
     severity_labels = {
         "low": "baixa",
         "medium": "media",
@@ -199,15 +99,19 @@ def _format_terminal_report(
         "regras_locais": "regras locais",
     }
 
+    quality_report = result.quality_report
+    diagnosis = result.diagnosis
+    investigation = result.investigation
+    resolution = result.resolution
     failed_checks = quality_report.failed_checks
     lines = [
         "DataOps AI - diagnostico da execucao",
         "",
-        f"Cenario testado: {_scenario_label(scenario)}",
-        f"Linhas carregadas: {rows_loaded}",
+        f"Cenario testado: {_scenario_label(result.scenario)}",
+        f"Linhas carregadas: {result.rows_loaded}",
         f"Validacoes com falha: {len(failed_checks)}",
         f"Gravidade: {severity_labels.get(diagnosis.severity, diagnosis.severity)}",
-        f"Motor do diagnostico: {engine_labels.get(engine_used, engine_used)}",
+        f"Motor do diagnostico: {engine_labels.get(result.diagnosis_engine, result.diagnosis_engine)}",
         "",
     ]
 

@@ -7,7 +7,7 @@ Plataforma de operações com agentes de IA para monitorar pipelines, detectar p
 Construir o core, sem interface:
 
 ```text
-BCB API -> Extraction -> Transform -> Banco -> Data Quality -> Quality Agent -> Investigation Agent -> Resolution Agent
+BCB API -> Extraction -> Transform -> Banco -> Data Quality -> Agent Orchestrator -> Quality Agent -> Investigation Agent -> Resolution Agent
 ```
 
 ## Stack da V1
@@ -49,6 +49,7 @@ Crie `.env` a partir de `.env.example` e preencha `GEMINI_API_KEY`. Sem chave, o
 
 ## Agentes
 
+- `AgentOrchestrator`: coordena pipeline, validacoes e agentes.
 - `DataQualityAgent`: interpreta as falhas de qualidade e gera o diagnostico.
 - `InvestigationAgent`: consulta banco e logs para levantar evidencias do incidente.
 - `ResolutionAgent`: sugere plano de correcao e gera relatorio de incidente.

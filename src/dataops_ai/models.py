@@ -53,3 +53,15 @@ class ResolutionPlan(BaseModel):
     correction_steps: list[str]
     prevention_steps: list[str]
     requires_manual_review: bool
+
+
+class PipelineRunResult(BaseModel):
+    scenario: str
+    rows_loaded: int
+    diagnosis_engine: str
+    quality_report: QualityReport
+    diagnosis: AgentDiagnosis
+    investigation: InvestigationReport
+    resolution: ResolutionPlan
+    diagnosis_report_path: str
+    incident_report_path: str
