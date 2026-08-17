@@ -11,6 +11,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from dataops_ai.agents.orchestrator import AgentOrchestrator
 from dataops_ai.config import load_settings
 from dataops_ai.scenarios import SCENARIOS
+from dataops_ai.tools.database_tools import DatabaseClient
 from dataops_ai.tools.incident_tools import read_incident_history
 
 
@@ -28,7 +29,10 @@ SCENARIO_ALIASES = {
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DataOps AI V1")
-    parser.add_argument("command", choices=["run", "rodar", "scenarios", "cenarios", "history", "historico"])
+    parser.add_argument(
+        "command",
+        choices=["run", "rodar", "scenarios", "cenarios", "history", "historico", "database", "banco"],
+    )
     parser.add_argument("--scenario", default="sem_incidente")
     parser.add_argument("--limit", type=int, default=5)
     args = parser.parse_args()
@@ -40,6 +44,10 @@ def main() -> None:
     settings = load_settings(PROJECT_ROOT)
     if args.command in {"history", "historico"}:
         print(_format_history(read_incident_history(settings.curated_dir, limit=args.limit)))
+        return
+
+    if args.command in {"database", "banco"}:
+        print(_format_database_check(settings.database_url))
         return
 
     scenario = _normalize_scenario(args.scenario)
@@ -87,6 +95,12 @@ def _format_history(records: list[dict]) -> str:
             f"revisao manual: {manual_review}"
         )
     return _plain_terminal_text("\n".join(lines))
+
+
+def _format_database_check(database_url: str) -> str:
+    DatabaseClient(database_url).ping()
+    backend = "PostgreSQL" if database_url.startswith("postgresql") else "SQLite"
+    return f"Banco configurado: {backend}\nConexao ok."
 
 
 def _public_scenario_labels() -> dict[str, str]:
