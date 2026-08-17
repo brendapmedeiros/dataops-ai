@@ -20,6 +20,7 @@ class InvestigationAgent:
     ) -> InvestigationReport:
         failed_checks = quality_report.failed_checks
         logs = read_pipeline_logs(self.logs_dir, limit=5)
+        api_fallback_logs = [log for log in logs if log.get("event") == "api_fallback_used"]
         rows_in_database = self.database.count_rows(table_name)
         sample = self.database.query_database(f"select * from {table_name} limit 5")
 
@@ -32,19 +33,35 @@ class InvestigationAgent:
         if not sample.empty:
             evidence.append(f"A amostra do banco tem as colunas: {', '.join(sample.columns)}.")
 
+        for log in api_fallback_logs:
+            payload = log.get("payload", {})
+            source = payload.get("source", "origem desconhecida")
+            reason = payload.get("reason", "motivo nao informado")
+            evidence.append(f"Log de coleta: API nao respondeu como esperado; fallback usado ({source}, {reason}).")
+
         for issue in failed_checks:
             column = f" na coluna {issue.column}" if issue.column else ""
             evidence.append(f"Falha de {issue.check_name}{column}: {issue.details}")
 
         return InvestigationReport(
             agent_name="InvestigationAgent",
-            summary=self._build_summary(failed_checks_count=len(failed_checks), rows_in_database=rows_in_database),
+            summary=self._build_summary(
+                failed_checks_count=len(failed_checks),
+                rows_in_database=rows_in_database,
+                api_fallback_used=bool(api_fallback_logs),
+            ),
             evidence=evidence,
-            hypothesis=self._build_hypothesis(quality_report, diagnosis, sample),
-            next_steps=self._build_next_steps(quality_report, diagnosis),
+            hypothesis=self._build_hypothesis(quality_report, diagnosis, sample, bool(api_fallback_logs)),
+            next_steps=self._build_next_steps(quality_report, diagnosis, bool(api_fallback_logs)),
         )
 
-    def _build_summary(self, failed_checks_count: int, rows_in_database: int) -> str:
+    def _build_summary(self, failed_checks_count: int, rows_in_database: int, api_fallback_used: bool) -> str:
+        if api_fallback_used and failed_checks_count == 0:
+            return (
+                "A qualidade dos dados passou, mas a investigacao encontrou falha operacional "
+                "na coleta e uso de fallback."
+            )
+
         if failed_checks_count == 0:
             return "A investigacao nao encontrou incidente para aprofundar."
 
@@ -53,8 +70,20 @@ class InvestigationAgent:
             f"com {rows_in_database} linha(s) ja carregada(s) no banco."
         )
 
-    def _build_hypothesis(self, quality_report: QualityReport, diagnosis: AgentDiagnosis, sample) -> str:
+    def _build_hypothesis(
+        self,
+        quality_report: QualityReport,
+        diagnosis: AgentDiagnosis,
+        sample,
+        api_fallback_used: bool,
+    ) -> str:
         failed_names = {issue.check_name for issue in quality_report.failed_checks}
+
+        if api_fallback_used:
+            return (
+                "O incidente parece ter origem na coleta. Os logs mostram falha de acesso a API "
+                "e uso de fallback antes da transformacao."
+            )
 
         if not failed_names:
             return "A execucao parece consistente. Nao ha evidencia de falha nos checks atuais."
@@ -87,9 +116,23 @@ class InvestigationAgent:
 
         return diagnosis.summary
 
-    def _build_next_steps(self, quality_report: QualityReport, diagnosis: AgentDiagnosis) -> list[str]:
+    def _build_next_steps(
+        self,
+        quality_report: QualityReport,
+        diagnosis: AgentDiagnosis,
+        api_fallback_used: bool,
+    ) -> list[str]:
         failed_names = {issue.check_name for issue in quality_report.failed_checks}
         steps = ["Conferir o arquivo bruto salvo em data/raw."]
+
+        if api_fallback_used:
+            steps.extend(
+                [
+                    "Verificar se a API do Banco Central estava disponivel no momento da coleta.",
+                    "Reprocessar a extracao quando a origem estiver estavel.",
+                    "Manter o fallback registrado nos logs para auditoria da execucao.",
+                ]
+            )
 
         if "check_schema" in failed_names:
             steps.append("Comparar as colunas do CSV processado com o contrato esperado.")

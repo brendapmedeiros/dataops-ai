@@ -25,8 +25,6 @@ def apply_scenario(df: pd.DataFrame, scenario: str) -> pd.DataFrame:
         staged.loc[staged.index[0], "value"] = None
     elif scenario == "scenario_02_schema_drift":
         staged = staged.rename(columns={"value": "valor_taxa"})
-    elif scenario == "scenario_03_api_timeout":
-        staged["source"] = "simulated_api_timeout_fallback"
     elif scenario == "scenario_04_duplicate_records":
         staged = pd.concat([staged, staged.iloc[[0]]], ignore_index=True)
     elif scenario == "scenario_05_invalid_type":

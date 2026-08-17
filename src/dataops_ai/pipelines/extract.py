@@ -16,6 +16,7 @@ def extract_bcb_series(
     end_date: str,
     output_dir: Path,
     timeout_seconds: int = 20,
+    force_timeout: bool = False,
 ) -> list[dict]:
     params = urlencode(
         {"formato": "json", "dataInicial": start_date, "dataFinal": end_date}
@@ -23,10 +24,16 @@ def extract_bcb_series(
     url = f"{BCB_BASE_URL.format(series_code=series_code)}?{params}"
 
     try:
+        if force_timeout:
+            raise TimeoutError("timeout simulado para teste da pipeline")
+
         with urlopen(url, timeout=timeout_seconds) as response:
             payload = json.loads(response.read().decode("utf-8"))
             source = "bcb_api"
-    except (TimeoutError, URLError, OSError):
+    except TimeoutError:
+        payload = _fallback_payload()
+        source = "simulated_api_timeout_fallback" if force_timeout else "local_fallback"
+    except (URLError, OSError):
         payload = _fallback_payload()
         source = "local_fallback"
 

@@ -46,13 +46,28 @@ def main() -> None:
 
     settings = load_settings(PROJECT_ROOT)
     write_pipeline_log(settings.logs_dir, "pipeline_started", {"scenario": scenario})
+    force_api_timeout = scenario == "scenario_03_api_timeout"
 
     raw_rows = extract_bcb_series(
         series_code=settings.bcb_series_code,
         start_date=settings.bcb_start_date,
         end_date=settings.bcb_end_date,
         output_dir=settings.raw_dir,
+        force_timeout=force_api_timeout,
     )
+    extraction_source = raw_rows[0].get("source", "unknown") if raw_rows else "empty"
+    if extraction_source != "bcb_api":
+        write_pipeline_log(
+            settings.logs_dir,
+            "api_fallback_used",
+            {
+                "scenario": scenario,
+                "source": extraction_source,
+                "reason": "timeout simulado" if force_api_timeout else "falha na coleta",
+                "rows_returned": len(raw_rows),
+            },
+        )
+
     transformed = transform_bcb_payload(raw_rows, settings.bcb_series_code)
     staged = apply_scenario(transformed, scenario)
 
