@@ -13,6 +13,10 @@ class DataQualityAgent:
         self.engine_used = "regras_locais"
 
     def diagnose(self, report: QualityReport, context: dict) -> AgentDiagnosis:
+        if not report.failed_checks:
+            self.engine_used = "regras_locais"
+            return self._rule_based_diagnosis(report)
+
         if not self.gemini_api_key:
             self.engine_used = "regras_locais"
             return self._rule_based_diagnosis(report)

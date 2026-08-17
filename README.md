@@ -38,7 +38,10 @@ python main.py rodar --scenario valores_nulos
 python main.py rodar --scenario mudanca_estrutura
 python main.py rodar --scenario registros_duplicados
 python main.py rodar --scenario tipo_invalido
+python main.py rodar --scenario timeout_api
 ```
+
+O cenario `timeout_api` simula uma falha na coleta, usa fallback local e registra isso nos logs para o agente de investigacao analisar.
 
 ## Gemini
 
@@ -48,4 +51,3 @@ Crie `.env` a partir de `.env.example` e preencha `GEMINI_API_KEY`. Sem chave, o
 
 - `DataQualityAgent`: interpreta as falhas de qualidade e gera o diagnostico.
 - `InvestigationAgent`: consulta banco e logs para levantar evidencias do incidente.
-

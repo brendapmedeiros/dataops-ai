@@ -273,6 +273,8 @@ def _humanize_terminal_text(text: str) -> str:
         "scenario_02_schema_drift": "mudanca_estrutura",
         "scenario_04_duplicate_records": "registros_duplicados",
         "scenario_05_invalid_type": "tipo_invalido",
+        "simulated_api_timeout_fallback": "fallback local",
+        "local_fallback": "fallback local",
     }
     clean = _plain_terminal_text(text)
     for old, new in replacements.items():

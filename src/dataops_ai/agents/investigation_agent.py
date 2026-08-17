@@ -20,7 +20,7 @@ class InvestigationAgent:
     ) -> InvestigationReport:
         failed_checks = quality_report.failed_checks
         logs = read_pipeline_logs(self.logs_dir, limit=5)
-        api_fallback_logs = [log for log in logs if log.get("event") == "api_fallback_used"]
+        api_fallback_logs = [log for log in logs if log.get("event") == "api_fallback_used"][-1:]
         rows_in_database = self.database.count_rows(table_name)
         sample = self.database.query_database(f"select * from {table_name} limit 5")
 
@@ -35,7 +35,7 @@ class InvestigationAgent:
 
         for log in api_fallback_logs:
             payload = log.get("payload", {})
-            source = payload.get("source", "origem desconhecida")
+            source = _source_label(payload.get("source", "origem desconhecida"))
             reason = payload.get("reason", "motivo nao informado")
             evidence.append(f"Log de coleta: API nao respondeu como esperado; fallback usado ({source}, {reason}).")
 
@@ -86,7 +86,7 @@ class InvestigationAgent:
             )
 
         if not failed_names:
-            return "A execucao parece consistente. Nao ha evidencia de falha nos checks atuais."
+            return "A execucao parece consistente. Nao ha evidencia de falha nas validacoes atuais."
 
         if "check_schema" in failed_names:
             return (
@@ -145,3 +145,12 @@ class InvestigationAgent:
             steps.append("Registrar o incidente para acompanhar a causa na proxima versao.")
 
         return steps
+
+
+def _source_label(source: str) -> str:
+    labels = {
+        "simulated_api_timeout_fallback": "fallback local",
+        "local_fallback": "fallback local",
+        "bcb_api": "API do Banco Central",
+    }
+    return labels.get(source, source)
