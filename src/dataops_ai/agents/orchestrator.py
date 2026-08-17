@@ -12,7 +12,12 @@ from dataops_ai.pipelines.extract import extract_bcb_series
 from dataops_ai.pipelines.load import load_timeseries
 from dataops_ai.pipelines.transform import transform_bcb_payload
 from dataops_ai.scenarios import apply_scenario
-from dataops_ai.tools.incident_tools import append_incident_history, create_incident_report
+from dataops_ai.tools.incident_tools import (
+    append_incident_history_record,
+    build_incident_history_record,
+    create_incident_report,
+    save_incident_history_record,
+)
 from dataops_ai.tools.log_tools import get_last_pipeline_run, write_pipeline_log
 from dataops_ai.tools.quality_tools import run_quality_checks
 
@@ -91,8 +96,7 @@ class AgentOrchestrator:
             ),
             encoding="utf-8",
         )
-        history_path = append_incident_history(
-            self.settings.curated_dir,
+        history_record = build_incident_history_record(
             run_id,
             scenario_label,
             quality_report,
@@ -102,6 +106,8 @@ class AgentOrchestrator:
             str(diagnosis_report_path),
             str(incident_report_path),
         )
+        history_path = append_incident_history_record(self.settings.curated_dir, history_record)
+        save_incident_history_record(self.settings.database_url, history_record)
 
         return PipelineRunResult(
             run_id=run_id,

@@ -22,7 +22,7 @@ BCB API
 
 - Extracao de dados da API SGS do Banco Central.
 - Transformacao e padronizacao de series temporais.
-- Carga local em SQLite, com suporte planejado para PostgreSQL via `DATABASE_URL`.
+- Carga local em SQLite ou PostgreSQL via `DATABASE_URL`.
 - Validacoes de qualidade:
   - valores nulos
   - registros duplicados
@@ -33,7 +33,7 @@ BCB API
 - Investigacao baseada em banco e logs da pipeline.
 - Plano de resolucao com correcoes e prevencao.
 - Relatorio de incidente em Markdown.
-- Historico de execucoes em JSONL.
+- Historico de execucoes em JSONL e na tabela `incident_history`.
 - `run_id` para rastrear logs, diagnostico, investigacao, resolucao e historico da mesma execucao.
 
 ## Stack
@@ -63,6 +63,7 @@ src/dataops_ai/
     load.py
 
   tools/
+    api_tools.py
     database_tools.py
     incident_tools.py
     log_tools.py
@@ -140,6 +141,12 @@ Validar a conexao configurada:
 python main.py banco
 ```
 
+Validar banco e API antes de executar a pipeline:
+
+```bash
+python main.py status
+```
+
 ## Como executar
 
 Rodar a pipeline sem forcar incidente:
@@ -191,6 +198,12 @@ Tambem sao gravados logs em:
 logs/pipeline_runs.jsonl
 ```
 
+Quando o banco esta configurado, o resumo da execucao tambem e gravado na tabela:
+
+```text
+incident_history
+```
+
 ## Historico
 
 Listar execucoes recentes:
@@ -226,7 +239,6 @@ Gera plano de resolucao com impacto, correcoes sugeridas, acoes preventivas e in
 
 ## Roadmap
 
-- PostgreSQL como banco principal em ambiente local.
 - API com FastAPI para disparar execucoes e consultar historico.
 - Docker Compose com aplicacao e banco.
 - Dashboard para visualizacao de execucoes e incidentes.

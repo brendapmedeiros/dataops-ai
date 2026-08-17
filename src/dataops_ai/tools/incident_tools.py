@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport, ResolutionPlan
+from dataops_ai.tools.database_tools import DatabaseClient
 
 
 def create_incident_report(
@@ -36,9 +37,38 @@ def append_incident_history(
     diagnosis_report_path: str,
     incident_report_path: str,
 ) -> Path:
+    record = build_incident_history_record(
+        run_id,
+        scenario,
+        quality_report,
+        diagnosis,
+        diagnosis_engine,
+        resolution,
+        diagnosis_report_path,
+        incident_report_path,
+    )
+    return append_incident_history_record(output_dir, record)
+
+
+def append_incident_history_record(output_dir: Path, record: dict) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     history_path = output_dir / "incident_history.jsonl"
-    record = {
+    with history_path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return history_path
+
+
+def build_incident_history_record(
+    run_id: str,
+    scenario: str,
+    quality_report: QualityReport,
+    diagnosis: AgentDiagnosis,
+    diagnosis_engine: str,
+    resolution: ResolutionPlan,
+    diagnosis_report_path: str,
+    incident_report_path: str,
+) -> dict:
+    return {
         "run_id": run_id,
         "recorded_at": datetime.now(UTC).isoformat(),
         "scenario": scenario,
@@ -52,9 +82,14 @@ def append_incident_history(
         "diagnosis_report_path": diagnosis_report_path,
         "incident_report_path": incident_report_path,
     }
-    with history_path.open("a", encoding="utf-8") as file:
-        file.write(json.dumps(record, ensure_ascii=False) + "\n")
-    return history_path
+
+
+def save_incident_history_record(
+    database_url: str,
+    record: dict,
+    table_name: str = "incident_history",
+) -> None:
+    DatabaseClient(database_url).append_record(record, table_name)
 
 
 def read_incident_history(output_dir: Path, limit: int = 10) -> list[dict]:

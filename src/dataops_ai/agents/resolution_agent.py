@@ -11,22 +11,32 @@ class ResolutionAgent:
         investigation: InvestigationReport,
     ) -> ResolutionPlan:
         failed_names = {issue.check_name for issue in quality_report.failed_checks}
+        missing_schema = _has_missing_column_issue(quality_report)
+        type_issue = _has_type_issue(quality_report)
         api_issue = "fallback" in investigation.hypothesis.lower() or "coleta" in investigation.hypothesis.lower()
 
         return ResolutionPlan(
             agent_name="ResolutionAgent",
-            summary=self._summary(failed_names, api_issue),
+            summary=self._summary(failed_names, api_issue, missing_schema, type_issue),
             impact=self._impact(quality_report, diagnosis, api_issue),
-            correction_steps=self._correction_steps(failed_names, api_issue),
-            prevention_steps=self._prevention_steps(failed_names, api_issue),
-            requires_manual_review=self._requires_manual_review(diagnosis, failed_names, api_issue),
+            correction_steps=self._correction_steps(failed_names, api_issue, missing_schema, type_issue),
+            prevention_steps=self._prevention_steps(failed_names, api_issue, missing_schema, type_issue),
+            requires_manual_review=self._requires_manual_review(diagnosis, failed_names, api_issue, missing_schema),
         )
 
-    def _summary(self, failed_names: set[str], api_issue: bool) -> str:
+    def _summary(
+        self,
+        failed_names: set[str],
+        api_issue: bool,
+        missing_schema: bool,
+        type_issue: bool,
+    ) -> str:
         if api_issue and not failed_names:
             return "A correcao principal e operacional: validar a origem e reprocessar a coleta."
-        if "check_schema" in failed_names:
+        if missing_schema:
             return "A correcao principal e ajustar o contrato de colunas antes de seguir com a carga."
+        if type_issue:
+            return "A correcao principal e corrigir a conversao de tipos antes da carga final."
         if "check_duplicates" in failed_names:
             return "A correcao principal e remover duplicados e tornar a carga idempotente."
         if "check_nulls" in failed_names or "check_anomalies" in failed_names:
@@ -48,7 +58,13 @@ class ResolutionAgent:
 
         return "Nao foi identificado impacto relevante nesta execucao."
 
-    def _correction_steps(self, failed_names: set[str], api_issue: bool) -> list[str]:
+    def _correction_steps(
+        self,
+        failed_names: set[str],
+        api_issue: bool,
+        missing_schema: bool,
+        type_issue: bool,
+    ) -> list[str]:
         steps: list[str] = []
 
         if api_issue:
@@ -60,7 +76,7 @@ class ResolutionAgent:
                 ]
             )
 
-        if "check_schema" in failed_names:
+        if missing_schema:
             steps.extend(
                 [
                     "Conferir as colunas recebidas no arquivo bruto.",
@@ -69,7 +85,16 @@ class ResolutionAgent:
                 ]
             )
 
-        if "check_nulls" in failed_names or "check_anomalies" in failed_names:
+        if type_issue:
+            steps.extend(
+                [
+                    "Inspecionar os valores que nao foram convertidos para numero.",
+                    "Aplicar conversao numerica com tratamento para erro.",
+                    "Separar registros invalidos antes de gravar a tabela final.",
+                ]
+            )
+
+        if ("check_nulls" in failed_names or "check_anomalies" in failed_names) and not type_issue:
             steps.extend(
                 [
                     "Isolar as linhas com valor vazio ou invalido.",
@@ -88,13 +113,21 @@ class ResolutionAgent:
 
         return steps or ["Manter monitoramento da pipeline."]
 
-    def _prevention_steps(self, failed_names: set[str], api_issue: bool) -> list[str]:
+    def _prevention_steps(
+        self,
+        failed_names: set[str],
+        api_issue: bool,
+        missing_schema: bool,
+        type_issue: bool,
+    ) -> list[str]:
         steps = ["Registrar o incidente no historico da pipeline."]
 
         if api_issue:
             steps.append("Adicionar alerta quando a pipeline usar fallback.")
-        if "check_schema" in failed_names:
+        if missing_schema:
             steps.append("Criar validacao de contrato antes da etapa de carga.")
+        if type_issue:
+            steps.append("Validar tipos das colunas obrigatorias antes de gravar no banco.")
         if "check_nulls" in failed_names or "check_anomalies" in failed_names:
             steps.append("Criar regra de quarentena para linhas com valor invalido.")
         if "check_duplicates" in failed_names:
@@ -102,8 +135,28 @@ class ResolutionAgent:
 
         return steps
 
-    def _requires_manual_review(self, diagnosis: AgentDiagnosis, failed_names: set[str], api_issue: bool) -> bool:
+    def _requires_manual_review(
+        self,
+        diagnosis: AgentDiagnosis,
+        failed_names: set[str],
+        api_issue: bool,
+        missing_schema: bool,
+    ) -> bool:
         if failed_names == {"check_duplicates"}:
             return False
 
-        return api_issue or diagnosis.severity in {"high", "critical"} or "check_schema" in failed_names
+        return api_issue or diagnosis.severity in {"high", "critical"} or missing_schema
+
+
+def _has_missing_column_issue(quality_report: QualityReport) -> bool:
+    return any(
+        issue.check_name == "check_schema" and "nao existe" in issue.details
+        for issue in quality_report.failed_checks
+    )
+
+
+def _has_type_issue(quality_report: QualityReport) -> bool:
+    return any(
+        issue.check_name == "check_schema" and "Esperado:" in issue.details
+        for issue in quality_report.failed_checks
+    )

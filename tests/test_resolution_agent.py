@@ -48,6 +48,36 @@ class ResolutionAgentTest(unittest.TestCase):
             self.assertFalse(plan.requires_manual_review)
             self.assertTrue(any("deduplicacao" in step for step in plan.correction_steps))
 
+    def test_resolution_plan_handles_invalid_type(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            temp_path = Path(temp_dir)
+            database_url = f"sqlite:///{temp_path / 'test.db'}"
+            logs_dir = temp_path / "logs"
+            df = pd.DataFrame(
+                {
+                    "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+                    "value": ["invalid_value", 1.1],
+                    "series_code": [11, 11],
+                    "source": ["test", "test"],
+                }
+            )
+
+            load_timeseries(df, database_url)
+            quality_report = run_quality_checks(df)
+            diagnosis = DataQualityAgent(None, "gemini-flash-latest").diagnose(quality_report, {})
+            investigation = InvestigationAgent(database_url, logs_dir).investigate(
+                quality_report,
+                diagnosis,
+                "tipo_invalido",
+                "run_test_001",
+            )
+
+            plan = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
+
+            self.assertIn("conversao de tipos", plan.summary)
+            self.assertTrue(any("convertidos" in step for step in plan.correction_steps))
+            self.assertFalse(any("restaurar a coluna" in step for step in plan.correction_steps))
+
     def test_incident_report_is_created(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
             temp_path = Path(temp_dir)

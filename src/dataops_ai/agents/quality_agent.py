@@ -49,6 +49,8 @@ class DataQualityAgent:
     def _rule_based_diagnosis(self, report: QualityReport) -> AgentDiagnosis:
         failed = report.failed_checks
         failed_names = {issue.check_name for issue in failed}
+        missing_schema = _has_missing_column_issue(report)
+        type_issue = _has_type_issue(report)
 
         if not failed:
             return AgentDiagnosis(
@@ -61,14 +63,16 @@ class DataQualityAgent:
             )
 
         severity = "medium"
-        if "check_schema" in failed_names:
+        if missing_schema or type_issue:
             severity = "high"
         if any(issue.rows_affected >= max(1, report.total_rows // 2) for issue in failed):
             severity = "critical"
 
         causes = []
-        if "check_schema" in failed_names:
+        if missing_schema:
             causes.append("Mudanca de schema entre a saida da transformacao e o contrato esperado.")
+        if type_issue:
+            causes.append("Falha na conversao de tipo da coluna de valor antes da carga.")
         if "check_nulls" in failed_names:
             causes.append("Valores ausentes vindos da API ou introduzidos na transformacao.")
         if "check_duplicates" in failed_names:
@@ -88,3 +92,17 @@ class DataQualityAgent:
             ],
             needs_investigation_agent=severity in {"high", "critical"},
         )
+
+
+def _has_missing_column_issue(report: QualityReport) -> bool:
+    return any(
+        issue.check_name == "check_schema" and "nao existe" in issue.details
+        for issue in report.failed_checks
+    )
+
+
+def _has_type_issue(report: QualityReport) -> bool:
+    return any(
+        issue.check_name == "check_schema" and "Esperado:" in issue.details
+        for issue in report.failed_checks
+    )

@@ -97,10 +97,16 @@ class InvestigationAgent:
         if not failed_names:
             return "A execucao parece consistente. Nao ha evidencia de falha nas validacoes atuais."
 
-        if "check_schema" in failed_names:
+        if _has_missing_column_issue(quality_report):
             return (
                 "O problema provavelmente aconteceu na transformacao, porque a estrutura final "
                 "nao bate com o contrato esperado pela validacao."
+            )
+
+        if _has_type_issue(quality_report):
+            return (
+                "O problema esta ligado ao tipo do dado carregado. A coluna existe, mas chegou "
+                "com formato diferente do esperado e precisa de conversao antes da carga final."
             )
 
         if "check_duplicates" in failed_names:
@@ -143,8 +149,11 @@ class InvestigationAgent:
                 ]
             )
 
-        if "check_schema" in failed_names:
+        if _has_missing_column_issue(quality_report):
             steps.append("Comparar as colunas do CSV processado com o contrato esperado.")
+        if _has_type_issue(quality_report):
+            steps.append("Inspecionar os valores que nao foram convertidos para numero.")
+            steps.append("Revisar a conversao de tipos na transformacao antes da carga.")
         if "check_nulls" in failed_names or "check_anomalies" in failed_names:
             steps.append("Filtrar as linhas com valor vazio ou invalido no CSV processado.")
         if "check_duplicates" in failed_names:
@@ -163,3 +172,17 @@ def _source_label(source: str) -> str:
         "bcb_api": "API do Banco Central",
     }
     return labels.get(source, source)
+
+
+def _has_missing_column_issue(quality_report: QualityReport) -> bool:
+    return any(
+        issue.check_name == "check_schema" and "nao existe" in issue.details
+        for issue in quality_report.failed_checks
+    )
+
+
+def _has_type_issue(quality_report: QualityReport) -> bool:
+    return any(
+        issue.check_name == "check_schema" and "Esperado:" in issue.details
+        for issue in quality_report.failed_checks
+    )

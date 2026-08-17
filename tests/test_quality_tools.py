@@ -7,7 +7,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from dataops_ai.tools.quality_tools import run_quality_checks
+from dataops_ai.tools.quality_tools import compare_schema, run_quality_checks
 
 
 class QualityToolsTest(unittest.TestCase):
@@ -25,6 +25,19 @@ class QualityToolsTest(unittest.TestCase):
 
         self.assertTrue(report.failed_checks)
         self.assertTrue(any(issue.check_name == "check_nulls" for issue in report.failed_checks))
+
+    def test_compare_schema_detects_missing_column(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "series_code": [11],
+                "source": ["test"],
+            }
+        )
+
+        issues = compare_schema(df)
+
+        self.assertTrue(any(issue.column == "value" and issue.status == "fail" for issue in issues))
 
 
 if __name__ == "__main__":

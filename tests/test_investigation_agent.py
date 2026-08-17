@@ -87,6 +87,35 @@ class InvestigationAgentTest(unittest.TestCase):
             self.assertIn("fallback", " ".join(report.evidence))
             self.assertIn("coleta", report.hypothesis)
 
+    def test_investigation_handles_invalid_type_as_conversion_issue(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            temp_path = Path(temp_dir)
+            database_url = f"sqlite:///{temp_path / 'test.db'}"
+            logs_dir = temp_path / "logs"
+            df = pd.DataFrame(
+                {
+                    "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+                    "value": ["invalid_value", 1.1],
+                    "series_code": [11, 11],
+                    "source": ["test", "test"],
+                }
+            )
+
+            load_timeseries(df, database_url)
+            quality_report = run_quality_checks(df)
+            diagnosis = DataQualityAgent(None, "gemini-flash-latest").diagnose(quality_report, {})
+
+            report = InvestigationAgent(database_url, logs_dir).investigate(
+                quality_report,
+                diagnosis,
+                "tipo_invalido",
+                "run_test_001",
+            )
+
+            self.assertIn("tipo do dado", report.hypothesis)
+            self.assertIn("conversao", " ".join(report.next_steps))
+            self.assertNotIn("contrato esperado", report.hypothesis)
+
 
 if __name__ == "__main__":
     unittest.main()

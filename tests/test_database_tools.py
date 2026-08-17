@@ -16,6 +16,16 @@ class DatabaseToolsTest(unittest.TestCase):
 
             self.assertTrue(DatabaseClient(database_url).ping())
 
+    def test_append_record_keeps_existing_rows(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            database_url = f"sqlite:///{Path(temp_dir) / 'test.db'}"
+            database = DatabaseClient(database_url)
+
+            database.append_record({"run_id": "run_001", "failed_checks": 0}, "incident_history")
+            database.append_record({"run_id": "run_002", "failed_checks": 1}, "incident_history")
+
+            self.assertEqual(database.count_rows("incident_history"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

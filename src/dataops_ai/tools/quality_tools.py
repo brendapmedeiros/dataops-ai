@@ -89,6 +89,10 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
     return issues
 
 
+def compare_schema(df: pd.DataFrame, expected_schema: dict[str, str] | None = None) -> list[QualityIssue]:
+    return check_schema(df, expected_schema or EXPECTED_SCHEMA)
+
+
 def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIssue:
     if value_column not in df.columns:
         return QualityIssue(

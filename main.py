@@ -11,6 +11,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from dataops_ai.agents.orchestrator import AgentOrchestrator
 from dataops_ai.config import load_settings
 from dataops_ai.scenarios import SCENARIOS
+from dataops_ai.tools.api_tools import get_api_status
 from dataops_ai.tools.database_tools import DatabaseClient
 from dataops_ai.tools.incident_tools import read_incident_history
 
@@ -31,7 +32,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="DataOps AI V1")
     parser.add_argument(
         "command",
-        choices=["run", "rodar", "scenarios", "cenarios", "history", "historico", "database", "banco"],
+        choices=["run", "rodar", "scenarios", "cenarios", "history", "historico", "database", "banco", "status"],
     )
     parser.add_argument("--scenario", default="sem_incidente")
     parser.add_argument("--limit", type=int, default=5)
@@ -48,6 +49,10 @@ def main() -> None:
 
     if args.command in {"database", "banco"}:
         print(_format_database_check(settings.database_url))
+        return
+
+    if args.command == "status":
+        print(_format_status(settings))
         return
 
     scenario = _normalize_scenario(args.scenario)
@@ -101,6 +106,31 @@ def _format_database_check(database_url: str) -> str:
     DatabaseClient(database_url).ping()
     backend = "PostgreSQL" if database_url.startswith("postgresql") else "SQLite"
     return f"Banco configurado: {backend}\nConexao ok."
+
+
+def _format_status(settings) -> str:
+    lines = ["Status do DataOps AI", ""]
+
+    try:
+        lines.append(_format_database_check(settings.database_url))
+    except RuntimeError as exc:
+        lines.append(f"Banco: falhou\n{exc}")
+
+    api_status = get_api_status(
+        settings.bcb_series_code,
+        settings.bcb_start_date,
+        settings.bcb_end_date,
+        timeout_seconds=5,
+    )
+    api_label = "disponivel" if api_status["available"] else "indisponivel"
+    lines.extend(["", f"API Banco Central: {api_label}"])
+
+    if api_status["status_code"]:
+        lines.append(f"Codigo HTTP: {api_status['status_code']}")
+    if api_status["error"]:
+        lines.append(f"Erro: {api_status['error']}")
+
+    return _plain_terminal_text("\n".join(lines))
 
 
 def _public_scenario_labels() -> dict[str, str]:

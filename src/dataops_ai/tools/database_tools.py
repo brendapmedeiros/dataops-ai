@@ -32,14 +32,23 @@ class DatabaseClient:
             raise RuntimeError(_database_error_message(self.database_url)) from exc
 
     def write_dataframe(self, df: pd.DataFrame, table_name: str) -> None:
+        self._save_dataframe(df, table_name, if_exists="replace")
+
+    def append_dataframe(self, df: pd.DataFrame, table_name: str) -> None:
+        self._save_dataframe(df, table_name, if_exists="append")
+
+    def append_record(self, record: dict, table_name: str) -> None:
+        self.append_dataframe(pd.DataFrame([record]), table_name)
+
+    def _save_dataframe(self, df: pd.DataFrame, table_name: str, if_exists: str) -> None:
         _validate_table_name(table_name)
         if self.database_url.startswith("sqlite:///"):
             db_path = Path(self.database_url.removeprefix("sqlite:///"))
             with sqlite3.connect(db_path) as connection:
-                df.to_sql(table_name, connection, if_exists="replace", index=False)
+                df.to_sql(table_name, connection, if_exists=if_exists, index=False)
             return
 
-        self._write_with_sqlalchemy(df, table_name)
+        self._write_with_sqlalchemy(df, table_name, if_exists)
 
     def count_rows(self, table_name: str) -> int:
         _validate_table_name(table_name)
@@ -72,7 +81,7 @@ class DatabaseClient:
         except Exception as exc:
             raise RuntimeError(_database_error_message(self.database_url)) from exc
 
-    def _write_with_sqlalchemy(self, df: pd.DataFrame, table_name: str) -> None:
+    def _write_with_sqlalchemy(self, df: pd.DataFrame, table_name: str, if_exists: str) -> None:
         try:
             from sqlalchemy import create_engine
         except ModuleNotFoundError as exc:
@@ -82,7 +91,7 @@ class DatabaseClient:
 
         engine = create_engine(self.database_url)
         try:
-            df.to_sql(table_name, engine, if_exists="replace", index=False)
+            df.to_sql(table_name, engine, if_exists=if_exists, index=False)
         except Exception as exc:
             raise RuntimeError(_database_error_message(self.database_url)) from exc
 
