@@ -39,7 +39,11 @@ class AgentOrchestrator:
 
         rows_loaded = load_timeseries(staged, self.settings.database_url)
         quality_report = run_quality_checks(staged)
-        quality_agent = DataQualityAgent(self.settings.gemini_api_key, self.settings.gemini_model)
+        quality_agent = DataQualityAgent(
+            self.settings.gemini_api_key,
+            self.settings.gemini_model,
+            self.settings.gemini_store_interactions,
+        )
         diagnosis = quality_agent.diagnose(
             quality_report,
             {
@@ -78,6 +82,7 @@ class AgentOrchestrator:
             scenario_label,
             quality_report,
             diagnosis,
+            quality_agent.llm_metadata.model_dump(mode="json"),
             investigation,
             resolution,
         )
@@ -88,6 +93,7 @@ class AgentOrchestrator:
                     "quality_report": quality_report.model_dump(mode="json"),
                     "diagnosis": diagnosis.model_dump(mode="json"),
                     "diagnosis_engine": quality_agent.engine_used,
+                    "llm_metadata": quality_agent.llm_metadata.model_dump(mode="json"),
                     "investigation": investigation.model_dump(mode="json"),
                     "resolution": resolution.model_dump(mode="json"),
                 },
@@ -102,6 +108,7 @@ class AgentOrchestrator:
             quality_report,
             diagnosis,
             quality_agent.engine_used,
+            quality_agent.llm_metadata.model_dump(mode="json"),
             resolution,
             str(diagnosis_report_path),
             str(incident_report_path),
@@ -114,6 +121,7 @@ class AgentOrchestrator:
             scenario=scenario,
             rows_loaded=rows_loaded,
             diagnosis_engine=quality_agent.engine_used,
+            llm_metadata=quality_agent.llm_metadata,
             quality_report=quality_report,
             diagnosis=diagnosis,
             investigation=investigation,

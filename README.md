@@ -1,6 +1,6 @@
 # DataOps AI
 
-DataOps AI e uma plataforma local para monitoramento de pipelines de dados com agentes de IA. O projeto executa uma pipeline de series temporais usando a API SGS do Banco Central, valida a qualidade dos dados, investiga incidentes e gera um plano de resolucao com historico rastreavel por execucao.
+DataOps AI é uma plataforma local para monitoramento de pipelines de dados com agentes de IA. O projeto executa uma pipeline de séries temporais usando a API SGS do Banco Central, valida a qualidade dos dados, investiga incidentes e gera um plano de resolução com histórico rastreável por execução.
 
 ## Arquitetura
 
@@ -14,27 +14,27 @@ BCB API
       -> DataQualityAgent
       -> InvestigationAgent
       -> ResolutionAgent
-  -> Relatorios
-  -> Historico
+  -> Relatórios
+  -> Histórico
 ```
 
 ## Funcionalidades
 
-- Extracao de dados da API SGS do Banco Central.
-- Transformacao e padronizacao de series temporais.
+- Extração de dados da API SGS do Banco Central.
+- Transformação e padronização de séries temporais.
 - Carga local em SQLite ou PostgreSQL via `DATABASE_URL`.
-- Validacoes de qualidade:
+- Validações de qualidade:
   - valores nulos
   - registros duplicados
-  - mudanca de estrutura
-  - tipos invalidos
+  - mudança de estrutura
+  - tipos inválidos
   - anomalias simples
-- Diagnostico com Gemini, com fallback local por regras.
-- Investigacao baseada em banco e logs da pipeline.
-- Plano de resolucao com correcoes e prevencao.
-- Relatorio de incidente em Markdown.
-- Historico de execucoes em JSONL e na tabela `incident_history`.
-- `run_id` para rastrear logs, diagnostico, investigacao, resolucao e historico da mesma execucao.
+- Diagnóstico com Gemini via Interactions API, com saída estruturada e fallback local por regras.
+- Investigação baseada em banco e logs da pipeline.
+- Plano de resolução com correções e prevenção.
+- Relatório de incidente em Markdown.
+- Histórico de execuções em JSONL e na tabela `incident_history`.
+- `run_id` para rastrear logs, diagnóstico, investigação, resolução e histórico da mesma execução.
 
 ## Stack
 
@@ -71,6 +71,9 @@ src/dataops_ai/
     log_tools.py
     quality_tools.py
 
+  llm/
+    provider.py
+
   config.py
   api.py
   models.py
@@ -96,19 +99,20 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Para validar a instalacao:
+Para validar a instalação:
 
 ```bash
 python -m unittest discover -s tests
 ```
 
-## Configuracao
+## Configuração
 
 Crie um arquivo `.env` a partir de `.env.example`.
 
 ```env
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-flash-latest
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_STORE_INTERACTIONS=true
 
 DATABASE_URL=sqlite:///dataops_ai.db
 
@@ -117,11 +121,13 @@ BCB_START_DATE=01/01/2024
 BCB_END_DATE=31/01/2024
 ```
 
-Sem `GEMINI_API_KEY`, o diagnostico roda com regras locais.
+Sem `GEMINI_API_KEY`, o diagnóstico roda com regras locais.
+
+`GEMINI_STORE_INTERACTIONS=true` permite registrar a interaction do Gemini para rastreabilidade temporária na API do Google. O projeto também salva localmente os metadados principais da chamada.
 
 ## Banco de dados
 
-Por padrao, o projeto usa SQLite local:
+Por padrão, o projeto usa SQLite local:
 
 ```env
 DATABASE_URL=sqlite:///dataops_ai.db
@@ -139,7 +145,7 @@ Depois, atualize o `.env`:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dataops_ai
 ```
 
-Validar a conexao configurada:
+Validar a conexão configurada:
 
 ```bash
 python main.py banco
@@ -151,7 +157,7 @@ Validar banco e API antes de executar a pipeline:
 python main.py status
 ```
 
-Rodar uma validacao rapida do core:
+Rodar uma validação rápida do core:
 
 ```bash
 python main.py validar
@@ -163,7 +169,7 @@ Subir PostgreSQL e API juntos pelo Docker:
 docker compose up --build api
 ```
 
-A API fica disponivel em:
+A API fica disponível em:
 
 ```text
 http://127.0.0.1:8000
@@ -175,7 +181,7 @@ Subir PostgreSQL, API e dashboard:
 docker compose up --build dashboard
 ```
 
-O dashboard fica disponivel em:
+O dashboard fica disponível em:
 
 ```text
 http://127.0.0.1:8501
@@ -183,19 +189,19 @@ http://127.0.0.1:8501
 
 ## Como executar
 
-Rodar a pipeline sem forcar incidente:
+Rodar a pipeline sem forçar incidente:
 
 ```bash
 python main.py rodar
 ```
 
-Listar cenarios disponiveis:
+Listar cenários disponíveis:
 
 ```bash
 python main.py cenarios
 ```
 
-Executar um cenario especifico:
+Executar um cenário específico:
 
 ```bash
 python main.py rodar --scenario valores_nulos
@@ -229,26 +235,26 @@ GET  /historico
 POST /execucoes
 ```
 
-Exemplo de execucao pela API:
+Exemplo de execução pela API:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/execucoes -H "Content-Type: application/json" -d "{\"scenario\":\"tipo_invalido\"}"
 ```
 
-## Cenarios simulados
+## Cenários simulados
 
-| Cenario | Descricao |
+| Cenário | Descrição |
 |---|---|
-| `sem_incidente` | Executa a pipeline sem forcar erro. |
-| `valores_nulos` | Insere valor nulo em uma coluna obrigatoria. |
-| `mudanca_estrutura` | Simula mudanca de estrutura no dataset. |
-| `registros_duplicados` | Duplica registros para testar idempotencia. |
-| `tipo_invalido` | Insere texto em campo numerico. |
+| `sem_incidente` | Executa a pipeline sem forçar erro. |
+| `valores_nulos` | Insere valor nulo em uma coluna obrigatória. |
+| `mudanca_estrutura` | Simula mudança de estrutura no dataset. |
+| `registros_duplicados` | Duplica registros para testar idempotência. |
+| `tipo_invalido` | Insere texto em campo numérico. |
 | `timeout_api` | Simula falha na API e uso de fallback local. |
 
-## Saidas geradas
+## Saídas geradas
 
-A cada execucao, o projeto gera artefatos em `data/curated/`:
+A cada execução, o projeto gera artefatos em `data/curated/`:
 
 ```text
 quality_diagnosis.json
@@ -256,53 +262,75 @@ incident_report.md
 incident_history.jsonl
 ```
 
-Tambem sao gravados logs em:
+Também são gravados logs em:
 
 ```text
 logs/pipeline_runs.jsonl
 ```
 
-Quando o banco esta configurado, o resumo da execucao tambem e gravado na tabela:
+Quando o banco está configurado, o resumo da execução também é gravado na tabela:
 
 ```text
 incident_history
 ```
 
-## Historico
+## Gemini
 
-Listar execucoes recentes:
+O `DataQualityAgent` usa Gemini como motor de diagnóstico quando `GEMINI_API_KEY` está configurada. A chamada principal usa a Interactions API com contrato de resposta baseado no modelo Pydantic `AgentDiagnosis`.
+
+Metadados salvos a cada execução:
+
+- provedor usado
+- modelo
+- API chamada
+- `interaction_id`, quando retornado
+- `previous_interaction_id`, quando houver ciclo com tool
+- formato da resposta
+- versão do prompt
+- latência
+- tools disponíveis para o agente
+- tools chamadas pelo Gemini
+- motivo de fallback, quando houver
+
+O provider também suporta function calling em um ciclo controlado: o Gemini pode pedir uma tool, a aplicação executa a função local e envia o resultado de volta usando `previous_interaction_id`. Nesta versão, o `DataQualityAgent` disponibiliza tools para consultar o relatório de qualidade e o contexto da execução.
+
+Se a chamada principal com Interactions falhar, o provider tenta `generateContent` como compatibilidade. Se o Gemini continuar indisponível, o projeto usa regras locais e registra o motivo no relatório.
+
+## Histórico
+
+Listar execuções recentes:
 
 ```bash
 python main.py historico
 ```
 
-Com PostgreSQL configurado, o comando consulta a tabela `incident_history`. Se a tabela ainda nao existir, usa o arquivo `data/curated/incident_history.jsonl`.
+Com PostgreSQL configurado, o comando consulta a tabela `incident_history`. Se a tabela ainda não existir, usa o arquivo `data/curated/incident_history.jsonl`.
 
-Exemplo de saida:
+Exemplo de saída:
 
 ```text
-Historico recente de incidentes:
-- 20260817005902253788 | timeout na API | gravidade: baixa | falhas: 0 | revisao manual: sim
+Histórico recente de incidentes:
+- 20260817005902253788 | timeout na API | gravidade: baixa | falhas: 0 | revisão manual: sim
 ```
 
 ## Agentes
 
 ### AgentOrchestrator
 
-Coordena a execucao completa: pipeline, validacoes, diagnostico, investigacao, resolucao e persistencia dos relatorios.
+Coordena a execução completa: pipeline, validações, diagnóstico, investigação, resolução e persistência dos relatórios.
 
 ### DataQualityAgent
 
-Analisa o relatorio de qualidade e gera o diagnostico inicial. Usa Gemini quando configurado e fallback local quando nao ha chave ou quando a API falha.
+Analisa o relatório de qualidade e gera o diagnóstico inicial. Usa Gemini quando configurado e fallback local quando não há chave ou quando a API falha.
 
 ### InvestigationAgent
 
-Consulta logs e banco para levantar evidencias do incidente. Tambem identifica falhas operacionais, como uso de fallback apos timeout da API.
+Consulta logs e banco para levantar evidências do incidente. Também identifica falhas operacionais, como uso de fallback após timeout da API.
 
 ### ResolutionAgent
 
-Gera plano de resolucao com impacto, correcoes sugeridas, acoes preventivas e indicacao de revisao manual.
+Gera plano de resolução com impacto, correções sugeridas, ações preventivas e indicação de revisão manual.
 
 ## Roadmap
 
-- Expansao das regras de qualidade e contratos de schema.
+- Expansão das regras de qualidade e contratos de schema.

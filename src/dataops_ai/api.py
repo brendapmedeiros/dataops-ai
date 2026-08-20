@@ -55,9 +55,16 @@ class ApiStatusResponse(BaseModel):
     error: str | None = None
 
 
+class GeminiStatusResponse(BaseModel):
+    configurado: bool
+    modelo: str
+    interactions_ativas: bool
+
+
 class StatusResponse(BaseModel):
     banco: DatabaseStatusResponse
     api_banco_central: ApiStatusResponse
+    gemini: GeminiStatusResponse
 
 
 class ScenarioResponse(BaseModel):
@@ -78,6 +85,17 @@ class HistoryRecordResponse(BaseModel):
     failed_checks: int
     severity: str
     diagnosis_engine: str
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_api: str | None = None
+    llm_interaction_id: str | None = None
+    llm_previous_interaction_id: str | None = None
+    llm_response_format: str | None = None
+    llm_prompt_version: str | None = None
+    llm_latency_ms: int | None = None
+    llm_tool_names: str | None = None
+    llm_tool_calls: str | None = None
+    llm_fallback_reason: str | None = None
     requires_manual_review: bool
     summary: str
     diagnosis_report_path: str
@@ -95,6 +113,17 @@ class RunResponse(BaseModel):
     validacoes_com_falha: int
     gravidade: str
     motor_do_diagnostico: str
+    provedor_llm: str
+    modelo_llm: str | None = None
+    api_llm: str | None = None
+    interaction_id: str | None = None
+    previous_interaction_id: str | None = None
+    formato_resposta: str | None = None
+    prompt_version: str | None = None
+    latencia_llm_ms: int | None = None
+    tools_disponiveis: list[str] = Field(default_factory=list)
+    tools_chamadas: list[str] = Field(default_factory=list)
+    motivo_fallback: str | None = None
     precisa_revisao_manual: bool
     resumo: str
     relatorio_diagnostico: str
@@ -113,7 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "endpoints": ["/saude", "/status", "/cenarios", "/historico", "/execucoes", "/docs"],
         }
 
-    @app.get("/saude", response_model=HealthResponse, summary="Verifica se a API esta online")
+    @app.get("/saude", response_model=HealthResponse, summary="Verifica se a API está online")
     def health_check() -> HealthResponse:
         return {"status": "ok", "projeto": "DataOps AI"}
 
@@ -139,13 +168,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "banco": database_status,
             "api_banco_central": api_status,
+            "gemini": {
+                "configurado": bool(app_settings.gemini_api_key),
+                "modelo": app_settings.gemini_model,
+                "interactions_ativas": app_settings.gemini_store_interactions,
+            },
         }
 
-    @app.get("/cenarios", response_model=ScenariosResponse, summary="Lista os cenarios disponiveis")
+    @app.get("/cenarios", response_model=ScenariosResponse, summary="Lista os cenários disponíveis")
     def list_scenarios() -> ScenariosResponse:
         return {"cenarios": _public_scenarios()}
 
-    @app.get("/historico", response_model=HistoryResponse, summary="Lista execucoes recentes")
+    @app.get("/historico", response_model=HistoryResponse, summary="Lista execuções recentes")
     def list_history(limit: int = Query(default=5, ge=1, le=50)) -> HistoryResponse:
         return {"historico": _read_history(app_settings, limit)}
 
@@ -166,6 +200,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "validacoes_com_falha": len(result.quality_report.failed_checks),
             "gravidade": result.diagnosis.severity,
             "motor_do_diagnostico": result.diagnosis_engine,
+            "provedor_llm": result.llm_metadata.provider,
+            "modelo_llm": result.llm_metadata.model,
+            "api_llm": result.llm_metadata.api,
+            "interaction_id": result.llm_metadata.interaction_id,
+            "previous_interaction_id": result.llm_metadata.previous_interaction_id,
+            "formato_resposta": result.llm_metadata.response_format,
+            "prompt_version": result.llm_metadata.prompt_version,
+            "latencia_llm_ms": result.llm_metadata.latency_ms,
+            "tools_disponiveis": result.llm_metadata.tool_names,
+            "tools_chamadas": result.llm_metadata.tool_calls,
+            "motivo_fallback": result.llm_metadata.fallback_reason,
             "precisa_revisao_manual": result.resolution.requires_manual_review,
             "resumo": result.resolution.summary,
             "relatorio_diagnostico": _relative_path(result.diagnosis_report_path, app_settings.project_root),
@@ -179,17 +224,17 @@ def _normalize_scenario(raw_scenario: str) -> str:
     scenario = SCENARIO_ALIASES.get(raw_scenario)
     if scenario:
         return scenario
-    raise ValueError(f"Cenario invalido: {raw_scenario}")
+    raise ValueError(f"Cenário inválido: {raw_scenario}")
 
 
 def _public_scenarios() -> list[dict]:
     return [
-        {"nome": "sem_incidente", "descricao": "roda a pipeline sem forcar erro"},
+        {"nome": "sem_incidente", "descricao": "roda a pipeline sem forçar erro"},
         {"nome": "valores_nulos", "descricao": "insere valor nulo"},
         {"nome": "mudanca_estrutura", "descricao": "renomeia uma coluna esperada"},
         {"nome": "timeout_api", "descricao": "simula demora ou falha na origem da API"},
         {"nome": "registros_duplicados", "descricao": "duplica uma linha"},
-        {"nome": "tipo_invalido", "descricao": "insere texto onde deveria ter numero"},
+        {"nome": "tipo_invalido", "descricao": "insere texto onde deveria ter número"},
     ]
 
 
@@ -197,10 +242,10 @@ def _scenario_label(scenario: str) -> str:
     labels = {
         "none": "sem incidente",
         "scenario_01_null_values": "valores nulos",
-        "scenario_02_schema_drift": "mudanca de estrutura",
+        "scenario_02_schema_drift": "mudança de estrutura",
         "scenario_03_api_timeout": "timeout na API",
         "scenario_04_duplicate_records": "registros duplicados",
-        "scenario_05_invalid_type": "tipo invalido",
+        "scenario_05_invalid_type": "tipo inválido",
     }
     return labels.get(scenario, scenario)
 

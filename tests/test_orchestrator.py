@@ -19,6 +19,7 @@ class AgentOrchestratorTest(unittest.TestCase):
                 database_url=f"sqlite:///{root / 'test.db'}",
                 gemini_api_key=None,
                 gemini_model="gemini-flash-latest",
+                gemini_store_interactions=True,
                 bcb_series_code=11,
                 bcb_start_date="01/01/2024",
                 bcb_end_date="05/01/2024",

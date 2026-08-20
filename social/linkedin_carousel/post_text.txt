@@ -1,0 +1,14 @@
+Comecei a construir o DataOps AI, um projeto de portfólio que une Engenharia de Dados, Data Quality e agentes com Gemini.
+
+A ideia é simular uma plataforma de DataOps capaz de monitorar uma pipeline, detectar incidentes nos dados, investigar possíveis causas e gerar diagnósticos rastreáveis por execução.
+
+Na V1, o projeto já conta com ingestão da API SGS do Banco Central, transformação em Python, carga em PostgreSQL, validações de qualidade, agentes de diagnóstico/investigação/resolução, API com FastAPI, dashboard em Streamlit e Docker Compose.
+
+Também comecei a integrar o Gemini de forma mais estruturada: com resposta tipada, metadata da chamada, versionamento de prompt, fallback local e preparação para function calling.
+
+Ainda está em construção, mas esse é exatamente o objetivo: evoluir por etapas, documentando decisões técnicas e tratando IA como parte da arquitetura, não como uma chamada solta de API.
+
+Repositório:
+https://github.com/brendapmedeiros/dataops-ai
+
+#DataEngineering #DataOps #Python #PostgreSQL #GeminiAPI #GoogleStudentAmbassador #AIEngineering #PortfolioProject

@@ -113,7 +113,7 @@ class InvestigationAgentTest(unittest.TestCase):
             )
 
             self.assertIn("tipo do dado", report.hypothesis)
-            self.assertIn("conversao", " ".join(report.next_steps))
+            self.assertIn("conversão", " ".join(report.next_steps))
             self.assertNotIn("contrato esperado", report.hypothesis)
 
 

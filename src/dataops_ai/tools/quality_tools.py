@@ -25,7 +25,7 @@ def check_nulls(df: pd.DataFrame, required_columns: list[str]) -> list[QualityIs
                     status="fail",
                     column=column,
                     rows_affected=len(df),
-                    details=f"A coluna {_column_label(column)} nao existe, entao nao da para avaliar nulos nela.",
+                    details=f"A coluna {_column_label(column)} não existe, então não dá para avaliar nulos nela.",
                 )
             )
             continue
@@ -50,7 +50,7 @@ def check_duplicates(df: pd.DataFrame, subset: list[str]) -> QualityIssue:
             check_name="check_duplicates",
             status="fail",
             rows_affected=len(df),
-            details=f"Nao da para verificar duplicados. Colunas ausentes: {_join_columns(missing_columns)}.",
+            details=f"Não dá para verificar duplicados. Colunas ausentes: {_join_columns(missing_columns)}.",
         )
 
     duplicate_count = int(df.duplicated(subset=subset).sum())
@@ -72,7 +72,7 @@ def check_schema(df: pd.DataFrame, expected_schema: dict[str, str]) -> list[Qual
                     status="fail",
                     column=column,
                     rows_affected=len(df),
-                    details=f"A coluna esperada {_column_label(column)} nao existe na base.",
+                    details=f"A coluna esperada {_column_label(column)} não existe na base.",
                 )
             )
     return issues
@@ -107,7 +107,7 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
             status="fail",
             column=value_column,
             rows_affected=len(df),
-            details=f"Nao da para verificar anomalias. Coluna ausente: {_column_label(value_column)}.",
+            details=f"Não dá para verificar anomalias. Coluna ausente: {_column_label(value_column)}.",
         )
 
     numeric_values = pd.to_numeric(df[value_column], errors="coerce")
@@ -120,7 +120,7 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
         status="fail" if affected else "pass",
         column=value_column,
         rows_affected=affected,
-        details=f"{invalid_count} valor(es) numerico(s) invalido(s) e {negative_count} valor(es) negativo(s).",
+        details=f"{invalid_count} valor(es) numérico(s) inválido(s) e {negative_count} valor(es) negativo(s).",
     )
 
 
@@ -151,7 +151,7 @@ def _column_label(column: str) -> str:
     labels = {
         "date": "data",
         "value": "valor",
-        "series_code": "codigo da serie",
+        "series_code": "código da série",
         "source": "origem",
     }
     return labels.get(column, column)
@@ -164,7 +164,7 @@ def _join_columns(columns: list[str]) -> str:
 def _type_label(dtype: str) -> str:
     labels = {
         "datetime": "data",
-        "numeric": "numero",
+        "numeric": "número",
         "text": "texto",
     }
     return labels.get(dtype, dtype)

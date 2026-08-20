@@ -52,7 +52,7 @@ class ResolutionAgentTest(unittest.TestCase):
 
             self.assertIn("duplicados", plan.summary)
             self.assertFalse(plan.requires_manual_review)
-            self.assertTrue(any("deduplicacao" in step for step in plan.correction_steps))
+            self.assertTrue(any("deduplicação" in step for step in plan.correction_steps))
 
     def test_resolution_plan_handles_invalid_type(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
@@ -80,7 +80,7 @@ class ResolutionAgentTest(unittest.TestCase):
 
             plan = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
 
-            self.assertIn("conversao de tipos", plan.summary)
+            self.assertIn("conversão de tipos", plan.summary)
             self.assertTrue(any("convertidos" in step for step in plan.correction_steps))
             self.assertFalse(any("restaurar a coluna" in step for step in plan.correction_steps))
 
@@ -121,12 +121,13 @@ class ResolutionAgentTest(unittest.TestCase):
                 "timeout na API",
                 quality_report,
                 diagnosis,
+                _local_llm_metadata(),
                 investigation,
                 resolution,
             )
 
             self.assertTrue(report_path.exists())
-            self.assertIn("Relatorio de incidente", report_path.read_text(encoding="utf-8"))
+            self.assertIn("Relatório de incidente", report_path.read_text(encoding="utf-8"))
 
     def test_incident_history_is_appended_and_read(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
@@ -161,6 +162,7 @@ class ResolutionAgentTest(unittest.TestCase):
                 quality_report,
                 diagnosis,
                 "regras_locais",
+                _local_llm_metadata(),
                 resolution,
                 "quality_diagnosis.json",
                 "incident_report.md",
@@ -185,7 +187,7 @@ class ResolutionAgentTest(unittest.TestCase):
                 "severity": "low",
                 "diagnosis_engine": "regras_locais",
                 "requires_manual_review": False,
-                "summary": "execucao ok",
+                "summary": "execução ok",
                 "diagnosis_report_path": "quality_diagnosis.json",
                 "incident_report_path": "incident_report.md",
             }
@@ -203,6 +205,17 @@ class ResolutionAgentTest(unittest.TestCase):
 
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0]["run_id"], "run_test_002")
+
+
+def _local_llm_metadata() -> dict:
+    return {
+        "provider": "local",
+        "api": "regras_locais",
+        "prompt_version": "quality-diagnosis-v1",
+        "tool_names": [],
+        "tool_calls": [],
+        "fallback_reason": "teste com regras locais",
+    }
 
 
 if __name__ == "__main__":

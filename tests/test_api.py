@@ -31,6 +31,17 @@ class ApiTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["status"], "ok")
 
+    def test_status_includes_gemini_config_without_key(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            client = TestClient(create_app(_test_settings(Path(temp_dir))))
+
+            response = client.get("/status")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["gemini"]["modelo"], "gemini-flash-latest")
+            self.assertFalse(response.json()["gemini"]["configurado"])
+            self.assertNotIn("api_key", response.json()["gemini"])
+
     def test_list_scenarios(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
             client = TestClient(create_app(_test_settings(Path(temp_dir))))
@@ -60,7 +71,7 @@ class ApiTest(unittest.TestCase):
             response = client.post("/execucoes", json={"scenario": "cenario_que_nao_existe"})
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("Cenario invalido", response.json()["detail"])
+            self.assertIn("Cenário inválido", response.json()["detail"])
 
 
 def _test_settings(root: Path) -> Settings:
@@ -69,6 +80,7 @@ def _test_settings(root: Path) -> Settings:
         database_url=f"sqlite:///{root / 'test.db'}",
         gemini_api_key=None,
         gemini_model="gemini-flash-latest",
+        gemini_store_interactions=True,
         bcb_series_code=11,
         bcb_start_date="01/01/2024",
         bcb_end_date="05/01/2024",

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -82,9 +81,9 @@ def main() -> None:
             result,
         )
     )
-    print(f"\nRelatorio salvo em: {result.diagnosis_report_path}")
-    print(f"Relatorio de incidente salvo em: {result.incident_report_path}")
-    print(f"Historico atualizado em: {result.history_path}")
+    print(f"\nRelatório salvo em: {result.diagnosis_report_path}")
+    print(f"Relatório de incidente salvo em: {result.incident_report_path}")
+    print(f"Histórico atualizado em: {result.history_path}")
 
 
 def _normalize_scenario(raw_scenario: str) -> str:
@@ -93,32 +92,32 @@ def _normalize_scenario(raw_scenario: str) -> str:
         return scenario
 
     valid = ", ".join(_public_scenario_labels().keys())
-    raise SystemExit(f"Cenario invalido: {raw_scenario}\nUse um destes: {valid}")
+    raise SystemExit(f"Cenário inválido: {raw_scenario}\nUse um destes: {valid}")
 
 
 def _format_scenarios() -> str:
-    lines = ["Cenarios disponiveis:"]
+    lines = ["Cenários disponíveis:"]
     for alias, description in _public_scenario_labels().items():
         lines.append(f"- {alias}: {description}")
-    return _plain_terminal_text("\n".join(lines))
+    return "\n".join(lines)
 
 
 def _format_history(records: list[dict]) -> str:
     if not records:
-        return "Nenhum historico encontrado ainda."
+        return "Nenhum histórico encontrado ainda."
 
-    lines = ["Historico recente de incidentes:"]
+    lines = ["Histórico recente de incidentes:"]
     for record in records:
-        manual_review = "sim" if record.get("requires_manual_review") else "nao"
+        manual_review = "sim" if record.get("requires_manual_review") else "não"
         lines.append(
             "- "
             f"{record.get('run_id', 'sem run id')} | "
-            f"{record.get('scenario', 'cenario desconhecido')} | "
+            f"{record.get('scenario', 'cenário desconhecido')} | "
             f"gravidade: {_severity_label(record.get('severity', ''))} | "
             f"falhas: {record.get('failed_checks', 0)} | "
-            f"revisao manual: {manual_review}"
+            f"revisão manual: {manual_review}"
         )
-    return _plain_terminal_text("\n".join(lines))
+    return "\n".join(lines)
 
 
 def _read_history(settings, limit: int) -> list[dict]:
@@ -136,7 +135,7 @@ def _read_history(settings, limit: int) -> list[dict]:
 def _format_database_check(database_url: str) -> str:
     DatabaseClient(database_url).ping()
     backend = "PostgreSQL" if database_url.startswith("postgresql") else "SQLite"
-    return f"Banco configurado: {backend}\nConexao ok."
+    return f"Banco configurado: {backend}\nConexão ok."
 
 
 def _format_status(settings) -> str:
@@ -153,19 +152,19 @@ def _format_status(settings) -> str:
         settings.bcb_end_date,
         timeout_seconds=5,
     )
-    api_label = "disponivel" if api_status["available"] else "indisponivel"
+    api_label = "disponível" if api_status["available"] else "indisponível"
     lines.extend(["", f"API Banco Central: {api_label}"])
 
     if api_status["status_code"]:
-        lines.append(f"Codigo HTTP: {api_status['status_code']}")
+        lines.append(f"Código HTTP: {api_status['status_code']}")
     if api_status["error"]:
         lines.append(f"Erro: {api_status['error']}")
 
-    return _plain_terminal_text("\n".join(lines))
+    return "\n".join(lines)
 
 
 def _format_validation(settings) -> str:
-    lines = ["Validacao rapida do core", ""]
+    lines = ["Validação rápida do core", ""]
 
     database = DatabaseClient(settings.database_url)
     database_ok = False
@@ -188,28 +187,28 @@ def _format_validation(settings) -> str:
 
     scenario_results = _validate_quality_rules()
     quality_ok = all(result["ok"] for result in scenario_results)
-    lines.extend(["", "Cenarios de qualidade:"])
+    lines.extend(["", "Cenários de qualidade:"])
     for result in scenario_results:
         status = "ok" if result["ok"] else "falhou"
         lines.append(f"- {result['scenario']}: {status}")
 
     lines.append("")
     if database_ok and quality_ok and api_status["available"]:
-        lines.append("Resultado: core pronto para execucao.")
+        lines.append("Resultado: core pronto para execução.")
     elif database_ok and quality_ok:
         lines.append("Resultado: core ok, mas a API precisa ser verificada.")
     else:
         lines.append("Resultado: revisar os itens com falha antes de continuar.")
 
-    return _plain_terminal_text("\n".join(lines))
+    return "\n".join(lines)
 
 
 def _format_history_table_status(database: DatabaseClient) -> str:
     if not database.table_exists("incident_history"):
-        return "Historico no banco: tabela ainda nao criada"
+        return "Histórico no banco: tabela ainda não criada"
 
     total_rows = database.count_rows("incident_history")
-    return f"Historico no banco: {total_rows} registro(s)"
+    return f"Histórico no banco: {total_rows} registro(s)"
 
 
 def _validate_quality_rules() -> list[dict]:
@@ -224,9 +223,9 @@ def _validate_quality_rules() -> list[dict]:
     cases = [
         ("sem incidente", "none", set()),
         ("valores nulos", "scenario_01_null_values", {"check_nulls"}),
-        ("mudanca de estrutura", "scenario_02_schema_drift", {"check_schema"}),
+        ("mudança de estrutura", "scenario_02_schema_drift", {"check_schema"}),
         ("registros duplicados", "scenario_04_duplicate_records", {"check_duplicates"}),
-        ("tipo invalido", "scenario_05_invalid_type", {"check_types"}),
+        ("tipo inválido", "scenario_05_invalid_type", {"check_types"}),
     ]
     results = []
     for label, scenario, expected_failures in cases:
@@ -241,12 +240,12 @@ def _validate_quality_rules() -> list[dict]:
 
 def _public_scenario_labels() -> dict[str, str]:
     return {
-        "sem_incidente": "roda a pipeline sem forcar erro",
+        "sem_incidente": "roda a pipeline sem forçar erro",
         "valores_nulos": "insere valor nulo",
         "mudanca_estrutura": "renomeia uma coluna esperada",
         "timeout_api": "simula demora ou falha na origem da API",
         "registros_duplicados": "duplica uma linha",
-        "tipo_invalido": "insere texto onde deveria ter numero",
+        "tipo_invalido": "insere texto onde deveria ter número",
     }
 
 
@@ -254,10 +253,10 @@ def _scenario_label(scenario: str) -> str:
     labels = {
         "none": "sem incidente",
         "scenario_01_null_values": "valores nulos",
-        "scenario_02_schema_drift": "mudanca de estrutura",
+        "scenario_02_schema_drift": "mudança de estrutura",
         "scenario_03_api_timeout": "timeout na API",
         "scenario_04_duplicate_records": "registros duplicados",
-        "scenario_05_invalid_type": "tipo invalido",
+        "scenario_05_invalid_type": "tipo inválido",
     }
     return labels.get(scenario, scenario)
 
@@ -265,9 +264,9 @@ def _scenario_label(scenario: str) -> str:
 def _severity_label(severity: str) -> str:
     labels = {
         "low": "baixa",
-        "medium": "media",
+        "medium": "média",
         "high": "alta",
-        "critical": "critica",
+        "critical": "crítica",
     }
     return labels.get(severity, severity)
 
@@ -282,51 +281,53 @@ def _format_terminal_report(result) -> str:
     diagnosis = result.diagnosis
     investigation = result.investigation
     resolution = result.resolution
+    llm_metadata = result.llm_metadata
     failed_checks = quality_report.failed_checks
     lines = [
-        "DataOps AI - diagnostico da execucao",
+        "DataOps AI - diagnóstico da execução",
         "",
         f"Run id: {result.run_id}",
-        f"Cenario testado: {_scenario_label(result.scenario)}",
+        f"Cenário testado: {_scenario_label(result.scenario)}",
         f"Linhas carregadas: {result.rows_loaded}",
-        f"Validacoes com falha: {len(failed_checks)}",
+        f"Validações com falha: {len(failed_checks)}",
         f"Gravidade: {_severity_label(diagnosis.severity)}",
-        f"Motor do diagnostico: {engine_labels.get(result.diagnosis_engine, result.diagnosis_engine)}",
+        f"Motor do diagnóstico: {engine_labels.get(result.diagnosis_engine, result.diagnosis_engine)}",
+        f"LLM: {_format_llm_metadata(llm_metadata)}",
         "",
     ]
 
     if failed_checks:
-        lines.append("Validacoes que falharam:")
+        lines.append("Validações que falharam:")
         for issue in failed_checks:
             column = f" em {_column_label(issue.column)}" if issue.column else ""
             lines.append(f"- {_check_label(issue.check_name)}{column}: {issue.details}")
     else:
-        lines.append("Nenhuma validacao falhou.")
+        lines.append("Nenhuma validação falhou.")
 
     lines.extend(
         [
             "",
-            "Diagnostico:",
+            "Diagnóstico:",
             _humanize_terminal_text(diagnosis.summary),
             "",
-            "Possiveis causas:",
+            "Possíveis causas:",
         ]
     )
     lines.extend(f"- {_humanize_terminal_text(cause)}" for cause in diagnosis.probable_causes)
 
-    lines.extend(["", "Proximas acoes:"])
+    lines.extend(["", "Próximas ações:"])
     lines.extend(f"- {_humanize_terminal_text(action)}" for action in diagnosis.recommended_actions)
 
     if diagnosis.needs_investigation_agent:
-        lines.append("\nInvestigacao inicial acionada nesta execucao.")
+        lines.append("\nInvestigação inicial acionada nesta execução.")
 
     lines.extend(
         [
             "",
-            "Investigacao:",
+            "Investigação:",
             _humanize_terminal_text(investigation.summary),
             "",
-            "Evidencias:",
+            "Evidências:",
         ]
     )
     lines.extend(f"- {_humanize_terminal_text(_replace_internal_labels(item))}" for item in investigation.evidence)
@@ -334,10 +335,10 @@ def _format_terminal_report(result) -> str:
     lines.extend(
         [
             "",
-            "Hipotese:",
+            "Hipótese:",
             _humanize_terminal_text(investigation.hypothesis),
             "",
-            "Acoes sugeridas pela investigacao:",
+            "Ações sugeridas pela investigação:",
         ]
     )
     lines.extend(f"- {_humanize_terminal_text(item)}" for item in investigation.next_steps)
@@ -345,17 +346,17 @@ def _format_terminal_report(result) -> str:
     lines.extend(
         [
             "",
-            "Resolucao:",
+            "Resolução:",
             _humanize_terminal_text(resolution.summary),
             "",
             "Impacto:",
             _humanize_terminal_text(resolution.impact),
             "",
-            "Correcoes sugeridas:",
+            "Correções sugeridas:",
         ]
     )
     lines.extend(f"- {_humanize_terminal_text(item)}" for item in resolution.correction_steps)
-    lines.extend(["", f"Precisa de revisao manual: {'sim' if resolution.requires_manual_review else 'nao'}"])
+    lines.extend(["", f"Precisa de revisão manual: {'sim' if resolution.requires_manual_review else 'não'}"])
 
     return "\n".join(lines)
 
@@ -371,19 +372,28 @@ def _check_label(check_name: str) -> str:
     return labels.get(check_name, check_name)
 
 
+def _format_llm_metadata(metadata) -> str:
+    if metadata.provider != "gemini":
+        return f"regras locais ({metadata.fallback_reason or 'sem chamada externa'})"
+
+    parts = [metadata.model or "modelo não informado"]
+    if metadata.api:
+        parts.append(metadata.api)
+    if metadata.response_format:
+        parts.append(metadata.response_format)
+    if metadata.interaction_id:
+        parts.append(f"interaction {metadata.interaction_id}")
+    return "Gemini - " + " | ".join(parts)
+
+
 def _column_label(column: str) -> str:
     labels = {
         "date": "data",
         "value": "valor",
-        "series_code": "codigo da serie",
+        "series_code": "código da série",
         "source": "origem",
     }
     return labels.get(column, column)
-
-
-def _plain_terminal_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFKD", text.replace("\ufffd", ""))
-    return normalized.encode("ascii", "ignore").decode("ascii")
 
 
 def _humanize_terminal_text(text: str) -> str:
@@ -393,7 +403,7 @@ def _humanize_terminal_text(text: str) -> str:
         " value ": " valor ",
         "dataset": "base",
         "Dataset": "Base",
-        "casting": "conversao de tipo",
+        "casting": "conversão de tipo",
         "scenario_01_null_values": "valores_nulos",
         "scenario_02_schema_drift": "mudanca_estrutura",
         "scenario_04_duplicate_records": "registros_duplicados",
@@ -401,7 +411,7 @@ def _humanize_terminal_text(text: str) -> str:
         "simulated_api_timeout_fallback": "fallback local",
         "local_fallback": "fallback local",
     }
-    clean = _plain_terminal_text(text)
+    clean = text.replace("\ufffd", "")
     for old, new in replacements.items():
         clean = clean.replace(old, new)
     return clean
@@ -416,7 +426,7 @@ def _replace_internal_labels(text: str) -> str:
         "check_anomalies": "anomalias",
         "value": "valor",
         "date": "data",
-        "series_code": "codigo da serie",
+        "series_code": "código da série",
         "source": "origem",
     }
     clean = text
