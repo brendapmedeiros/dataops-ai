@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import os
+import textwrap
 
 import altair as alt
 import pandas as pd
@@ -19,15 +20,14 @@ SEVERITY_LABELS = {
     "critical": "crítica",
 }
 
-SEVERITY_COLORS = {
-    "baixa": "#2563eb",
-    "média": "#d97706",
-    "alta": "#ea580c",
-    "crítica": "#dc2626",
-}
+# Acento único do tema: azul puro, a pedido. Tudo que precisa de uma
+# variação suave (fundos de badge, hover) deriva dele via rgba, nunca
+# de um tom "azulado" diferente.
+ACCENT = "#0000FF"
+ACCENT_SOFT = "rgba(0, 0, 255, 0.12)"
+ACCENT_LINE = "rgba(0, 0, 255, 0.45)"
 
-
-st.set_page_config(page_title="DataOps AI", page_icon="DA", layout="wide")
+st.set_page_config(page_title="DataOps AI", page_icon="D.AI", layout="wide")
 
 
 def main() -> None:
@@ -39,58 +39,62 @@ def main() -> None:
 
     history_df = _history_dataframe(_history_records(history))
 
-    _render_header()
-    _render_kpis(status, history_df)
+    _render_masthead(status, history_df)
 
-    chart_left, chart_right = st.columns([0.48, 0.52], gap="medium")
-    with chart_left:
-        _render_trend(history_df)
-    with chart_right:
-        _render_scenario_chart(history_df)
+    side, main_col = st.columns([0.32, 0.68], gap="large")
+    with side:
+        _render_kpi_side(status, history_df)
+    with main_col:
+        _render_trend_figure(history_df)
+        _render_scenario_figure(history_df)
 
-    lower_left, lower_center, lower_right = st.columns([0.27, 0.43, 0.30], gap="medium")
-    with lower_left:
-        _render_gemini_panel(status, history_df)
-    with lower_center:
+    st.markdown('<hr class="c-divider">', unsafe_allow_html=True)
+
+    box_a, box_b, box_c = st.columns(3, gap="large")
+    with box_a:
+        _render_gemini_box(status, history_df)
+    with box_b:
+        _render_last_run_box(history_df)
+    with box_c:
+        _render_run_box(scenarios)
+
+    with st.expander("Ver histórico completo"):
         _render_history_table(history_df)
-    with lower_right:
-        _render_run_panel(scenarios)
 
 
-def _render_header() -> None:
+def _render_masthead(status: dict | None, history_df: pd.DataFrame) -> None:
+    database = status.get("banco", {}) if status else {}
+    bcb_api = status.get("api_banco_central", {}) if status else {}
+
+    total_runs = len(history_df)
+    failed_runs = int((history_df["falhas"] > 0).sum()) if not history_df.empty else 0
+
+    db_ok = bool(database.get("conectado"))
+    api_ok = bool(bcb_api.get("available"))
+
+    if total_runs == 0:
+        headline = "Ainda sem execuções registradas. Rode um cenário para começar o boletim."
+    elif not db_ok or not api_ok:
+        headline = "Uma dependência externa está fora do ar — verifique banco e API do Banco Central antes de confiar nas próximas execuções."
+    elif failed_runs == 0:
+        headline = f"Todas as últimas {total_runs} execuções passaram sem incidente; o motor local resolveu sozinho, sem acionar o Gemini."
+    else:
+        headline = (
+            f"API do Banco Central está estável\n"
+            f"São necessárias verificações manuais em {failed_runs} das últimas {total_runs} execuções."
+        )
+
     st.markdown(
         f"""
-        <header class="topbar">
-            <div class="brand">
-                <span class="brand-mark">DA</span>
-                <div>
-                    <strong>DataOps AI</strong>
-                    <small>monitor de pipeline</small>
-                </div>
-            </div>
-            <nav>
-                <span class="active">Dashboard</span>
-                <span>Histórico</span>
-                <a href="{DOCS_URL}" target="_blank">API docs</a>
-            </nav>
-        </header>
-
-        <section class="hero">
-            <div>
-                <p>BCB API -> PostgreSQL -> qualidade -> agentes</p>
-                <h1>Saúde do pipeline</h1>
-            </div>
-            <div class="hero-meta">
-                <span>Core V1</span>
-                <span class="gemini-pill">Gemini</span>
-            </div>
-        </section>
+        <div class="c-kicker">Boletim de saúde do fluxo · Core V1</div>
+        <h1 class="c-h1">{_safe(headline)}</h1>
+        <p class="c-flow">API BCB <span>→</span> PostgreSQL <span>→</span> Agente de qualidade <span>→</span> Diagnóstico Gemini</p>
         """,
         unsafe_allow_html=True,
     )
 
 
-def _render_kpis(status: dict | None, history_df: pd.DataFrame) -> None:
+def _render_kpi_side(status: dict | None, history_df: pd.DataFrame) -> None:
     database = status.get("banco", {}) if status else {}
     bcb_api = status.get("api_banco_central", {}) if status else {}
 
@@ -102,214 +106,225 @@ def _render_kpis(status: dict | None, history_df: pd.DataFrame) -> None:
     api_value = "online" if bcb_api.get("available") else "falhou"
     api_detail = f"HTTP {bcb_api.get('status_code')}" if bcb_api.get("status_code") else "sem resposta"
 
-    col1, col2, col3, col4 = st.columns(4, gap="medium")
-    with col1:
-        _metric_card("Banco", db_value, database.get("tipo") or "PostgreSQL", db_value == "online")
-    with col2:
-        _metric_card("Banco Central", api_value, api_detail, api_value == "online")
-    with col3:
-        _metric_card("Execuções", str(total_runs), f"{failed_runs} com falha", failed_runs == 0)
-    with col4:
-        _metric_card("Revisão manual", str(manual_review), "últimos registros", manual_review == 0)
+    rows = [
+        ("Banco", db_value, database.get("tipo") or "PostgreSQL"),
+        ("Banco Central", api_value, api_detail),
+        ("Execuções", str(total_runs), f"{failed_runs} com falha"),
+        ("Revisão manual", str(manual_review), "últimos registros"),
+    ]
 
+    items = "".join(
+        f"""
+        <dt>{_safe(label)}</dt>
+        <dd>{_safe(value)} <small>{_safe(detail)}</small></dd>
+        """
+        for label, value, detail in rows
+    )
 
-def _render_trend(history_df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        _panel_title("Falhas por execução", "últimas 12 execuções")
-        if history_df.empty:
-            st.info("Sem histórico para exibir.")
-            return
-
-        chart_df = history_df.sort_values("ordem").tail(12).copy()
-        chart_df["execução"] = range(1, len(chart_df) + 1)
-
-        base = alt.Chart(chart_df).encode(
-            x=alt.X("execução:O", title="execução", axis=alt.Axis(labelAngle=0)),
-            y=alt.Y("falhas:Q", title="falhas", scale=alt.Scale(domainMin=0)),
-            tooltip=["run_id", "cenário", "falhas", "gravidade"],
-        )
-        chart = (
-            base.mark_area(color="#dbeafe", opacity=0.85)
-            + base.mark_line(color="#2563eb", strokeWidth=3)
-            + base.mark_point(color="#ffffff", stroke="#2563eb", strokeWidth=2, size=70)
-        )
-        st.altair_chart(_chart_style(chart, height=260), use_container_width=True)
-
-
-def _render_scenario_chart(history_df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        _panel_title("Incidentes por cenário", "distribuição do histórico")
-        if history_df.empty:
-            st.info("Sem histórico para exibir.")
-            return
-
-        chart_df = history_df["cenário"].value_counts().rename_axis("cenário").reset_index(name="execuções")
-        chart = (
-            alt.Chart(chart_df)
-            .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5, color="#0f172a")
-            .encode(
-                x=alt.X("cenário:N", title=None, sort="-y", axis=alt.Axis(labelAngle=-20)),
-                y=alt.Y("execuções:Q", title="execuções", scale=alt.Scale(domainMin=0)),
-                tooltip=["cenário", "execuções"],
-            )
-        )
-        st.altair_chart(_chart_style(chart, height=260), use_container_width=True)
-
-
-def _render_gemini_panel(status: dict | None, history_df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        _panel_title("Gemini", "configuração atual")
-
-        gemini_status = status.get("gemini", {}) if status else {}
-        configured = bool(gemini_status.get("configurado"))
-        current_model = gemini_status.get("modelo") or "não informado"
-        status_label = "configurado" if configured else "sem chave"
-        badge_class = "status-ok" if configured else "status-warn"
-
-        st.markdown(
-            f"""
-            <div class="gemini-brand">
-                <span>Google</span>
-                <strong>Gemini</strong>
-                <small class="{badge_class}">{status_label}</small>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if history_df.empty:
-            st.info("Sem execução recente.")
-            return
-
+    quote = "Sem incidente, o Gemini não é acionado — o motor local resolve sozinho."
+    if not history_df.empty:
         latest = history_df.iloc[0]
-        provider = latest.get("llm_provider") or latest.get("motor") or "local"
-        last_status = "usou Gemini" if provider == "gemini" else "última execução local"
-        last_badge_class = "status-ok" if provider == "gemini" else "status-warn"
-
-        items = {
-            "modelo": latest.get("llm_model") or current_model,
-            "api": latest.get("llm_api") or "regras locais",
-            "formato": latest.get("llm_response_format") or "sem schema",
-            "interaction": latest.get("llm_interaction_id") or "não armazenada",
-            "tools": latest.get("llm_tool_names") or "não informado",
-            "chamadas": latest.get("llm_tool_calls") or "nenhuma",
-        }
         fallback = latest.get("llm_fallback_reason")
+        if fallback and str(fallback) != "sem falha de qualidade":
+            quote = str(fallback)
 
+    st.markdown(
+        f"""
+        <dl class="c-dl">{items}</dl>
+        <div class="c-quote">“{_safe(quote)}”</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_trend_figure(history_df: pd.DataFrame) -> None:
+    st.markdown(
+        """
+        <h3 class="c-fig-title">Figura 1 — Falhas por execução</h3>
+        <div class="c-fig-cap">Série das últimas 12 execuções registradas no histórico</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if history_df.empty:
+        st.info("Sem histórico para exibir.")
+        return
+
+    chart_df = history_df.sort_values("ordem").tail(12).copy()
+    chart_df["execução"] = range(1, len(chart_df) + 1)
+
+    base = alt.Chart(chart_df).encode(
+        x=alt.X("execução:O", title=None, axis=alt.Axis(labelAngle=0)),
+        y=alt.Y("falhas:Q", title=None, scale=alt.Scale(domainMin=0)),
+        tooltip=["run_id", "cenário", "falhas", "gravidade"],
+    )
+    chart = base.mark_line(color=ACCENT, strokeWidth=2) + base.mark_point(
+        color=ACCENT, size=40
+    )
+    st.altair_chart(_chart_style(chart, height=170), use_container_width=True)
+    st.markdown(
+        '<div class="c-fig-foot">eixo x: execuções mais recentes → mais antigas · eixo y: nº de falhas</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_scenario_figure(history_df: pd.DataFrame) -> None:
+    st.markdown(
+        """
+        <h3 class="c-fig-title" style="margin-top:2.2rem;">Figura 2 — Incidentes por cenário</h3>
+        <div class="c-fig-cap">Distribuição acumulada do histórico</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if history_df.empty:
+        st.info("Sem histórico para exibir.")
+        return
+
+    chart_df = history_df["cenário"].value_counts().rename_axis("cenário").reset_index(name="execuções")
+    chart = (
+        alt.Chart(chart_df)
+        .mark_bar(color=ACCENT, opacity=0.88)
+        .encode(
+            x=alt.X("cenário:N", title=None, sort="-y", axis=alt.Axis(labelAngle=-20)),
+            y=alt.Y("execuções:Q", title=None, scale=alt.Scale(domainMin=0)),
+            tooltip=["cenário", "execuções"],
+        )
+    )
+    st.altair_chart(_chart_style(chart, height=150), use_container_width=True)
+
+
+def _render_gemini_box(status: dict | None, history_df: pd.DataFrame) -> None:
+    gemini_status = status.get("gemini", {}) if status else {}
+    configured = bool(gemini_status.get("configurado"))
+    current_model = gemini_status.get("modelo") or "não informado"
+
+    latest = history_df.iloc[0] if not history_df.empty else pd.Series(dtype=object)
+    items = {
+        "modelo": latest.get("llm_model") or current_model,
+        "api": latest.get("llm_api") or "regras locais",
+        "formato": latest.get("llm_response_format") or "sem schema",
+        "interação": latest.get("llm_interaction_id") or "não armazenada",
+    }
+    st.markdown(
+        f"""
+        <div class="c-box">
+            <div class="c-box-n">Modelo utilizado</div>
+            <h4>{_safe(current_model if configured else "sem chave configurada")}</h4>
+            {_kv_rows(items)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_last_run_box(history_df: pd.DataFrame) -> None:
+    if history_df.empty:
         st.markdown(
-            f"""
-            <div class="gemini-summary">
-                <div>
-                    <span>última execução</span>
-                    <strong>{_safe(provider)}</strong>
-                </div>
-                <small class="{last_badge_class}">{last_status}</small>
-            </div>
-            <div class="detail-list">
-                {_detail_rows(items)}
+            """
+            <div class="c-box">
+                <div class="c-box-n">Última execução</div>
+                <h4>nenhuma ainda</h4>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        if fallback:
-            message = str(fallback)
-            if configured and "GEMINI_API_KEY não configurada" in message:
-                message = "A última execução foi feita sem chave. Rode um cenário novo para registrar Gemini no histórico."
-            if configured and message == "sem falha de qualidade":
-                message = "A última execução não tinha incidente, então Gemini não foi acionado."
-            st.caption(message)
+        return
+
+    latest = history_df.iloc[0]
+    items = {
+        "falhas": latest.get("falhas"),
+        "gravidade": latest.get("gravidade"),
+        "revisão": latest.get("revisão_manual"),
+    }
+    st.markdown(
+        f"""
+        <div class="c-box">
+            <div class="c-box-n">Última execução</div>
+            <h4>{_safe(latest.get("run_id"))} · {_safe(latest.get("cenário"))}</h4>
+            {_kv_rows(items)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-def _render_history_table(history_df: pd.DataFrame) -> None:
-    with st.container(border=True):
-        _panel_title("Histórico recente", "últimas execuções")
-        if history_df.empty:
-            st.info("Nenhuma execução encontrada.")
+def _render_run_box(scenarios: dict | None) -> None:
+    st.markdown(
+        """
+        <div class="c-box">
+            <div class="c-box-n">Nova execução</div>
+            <h4>Rodar cenário</h4>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    scenario_items = scenarios.get("cenarios", []) if scenarios else []
+    if not scenario_items:
+        st.error("Nenhum cenário disponível.")
+        return
+
+    scenario_names = [item["nome"] for item in scenario_items]
+    descriptions = {item["nome"]: item["descricao"] for item in scenario_items}
+
+    selected = st.selectbox(
+        "Cenário", scenario_names, index=_default_scenario_index(scenario_names), label_visibility="collapsed"
+    )
+    st.caption(descriptions.get(selected, ""))
+
+    if st.button("Executar pipeline", type="primary", use_container_width=True):
+        with st.spinner("Executando pipeline..."):
+            response = _post_json("/execucoes", {"scenario": selected})
+
+        if not response:
+            st.error("Não foi possível executar a pipeline.")
             return
 
-        table = history_df[
-            [
-                "run_id",
-                "cenário",
-                "falhas",
-                "gravidade",
-                "motor",
-                "llm_api",
-                "revisão_manual",
-                "resumo",
-            ]
-        ]
-        st.dataframe(table, use_container_width=True, hide_index=True, height=315)
-
-
-def _render_run_panel(scenarios: dict | None) -> None:
-    with st.container(border=True):
-        _panel_title("Nova execução", "rodar um cenário")
-        scenario_items = scenarios.get("cenarios", []) if scenarios else []
-        if not scenario_items:
-            st.error("Nenhum cenário disponível.")
-            return
-
-        scenario_names = [item["nome"] for item in scenario_items]
-        descriptions = {item["nome"]: item["descricao"] for item in scenario_items}
-
-        selected = st.selectbox("Cenário", scenario_names, index=_default_scenario_index(scenario_names))
-        st.caption(descriptions.get(selected, ""))
-
-        if st.button("Executar pipeline", type="primary", use_container_width=True):
-            with st.spinner("Executando pipeline..."):
-                response = _post_json("/execucoes", {"scenario": selected})
-
-            if not response:
-                st.error("Não foi possível executar a pipeline.")
-                return
-
-            st.success(f"Execução finalizada: {response['run_id']}")
-            _render_run_result(response)
+        st.success(f"Execução finalizada: {response['run_id']}")
+        _render_run_result(response)
 
 
 def _render_run_result(response: dict) -> None:
     provider = response.get("provedor_llm") or "local"
-    badge_class = "status-ok" if provider == "gemini" else "status-warn"
-    badge_text = "Gemini" if provider == "gemini" else "local"
     fallback = response.get("motivo_fallback") or ""
     if fallback == "sem falha de qualidade":
         fallback = "Sem incidente: Gemini não foi acionado nesta execução."
 
-    st.markdown(
-        f"""
-        <div class="run-result">
-            <div>
-                <span>resultado</span>
-                <strong>{_safe(response.get("cenario", ""))}</strong>
-            </div>
-            <small class="{badge_class}">{badge_text}</small>
-        </div>
-        <div class="detail-list compact">
-            <span>gravidade</span><b>{_safe(response.get("gravidade", ""))}</b>
-            <span>falhas</span><b>{_safe(response.get("validacoes_com_falha", ""))}</b>
-            <span>modelo</span><b>{_safe(response.get("modelo_llm") or "não acionado")}</b>
-            <span>api</span><b>{_safe(response.get("api_llm") or "regras locais")}</b>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    items = {
+        "gravidade": response.get("gravidade", ""),
+        "falhas": response.get("validacoes_com_falha", ""),
+        "modelo": response.get("modelo_llm") or "não acionado",
+        "api": response.get("api_llm") or "regras locais",
+        "provedor": provider,
+    }
+    st.markdown(f'<div class="c-kv2-block">{_kv_rows(items)}</div>', unsafe_allow_html=True)
     if fallback:
         st.caption(fallback)
 
 
-def _metric_card(title: str, value: str, detail: str, healthy: bool) -> None:
-    badge_class = "status-ok" if healthy else "status-warn"
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <span>{_safe(title)}</span>
-            <strong>{_safe(value)}</strong>
-            <small class="{badge_class}">{_safe(detail)}</small>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+def _render_history_table(history_df: pd.DataFrame) -> None:
+    if history_df.empty:
+        st.info("Nenhuma execução encontrada.")
+        return
+
+    table = history_df[
+        [
+            "run_id",
+            "cenário",
+            "falhas",
+            "gravidade",
+            "motor",
+            "llm_api",
+            "revisão_manual",
+            "resumo",
+        ]
+    ]
+    st.dataframe(table, use_container_width=True, hide_index=True, height=340)
+
+
+def _kv_rows(items: dict[str, object]) -> str:
+    rows = []
+    for label, value in items.items():
+        rows.append(f'<div class="c-kv2"><span>{_safe(label)}</span><b>{_safe(value)}</b></div>')
+    return "".join(rows)
 
 
 def _default_scenario_index(scenario_names: list[str]) -> int:
@@ -318,32 +333,13 @@ def _default_scenario_index(scenario_names: list[str]) -> int:
     return 0
 
 
-def _panel_title(title: str, subtitle: str) -> None:
-    st.markdown(
-        f"""
-        <div class="panel-title">
-            <h2>{_safe(title)}</h2>
-            <span>{_safe(subtitle)}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def _chart_style(chart: alt.Chart, height: int) -> alt.Chart:
     return (
         chart.properties(height=height)
-        .configure_axis(labelColor="#64748b", titleColor="#475569", gridColor="#eef2f7")
+        .configure_axis(labelColor="#8a7f6f", titleColor="#c9bfae", gridColor="#241f18", domainColor="#332c22")
         .configure_view(strokeWidth=0)
         .configure(background="transparent")
     )
-
-
-def _detail_rows(items: dict[str, object]) -> str:
-    rows = []
-    for label, value in items.items():
-        rows.append(f"<span>{_safe(label)}</span><b>{_safe(value)}</b>")
-    return "".join(rows)
 
 
 def _history_records(history: dict | None) -> list[dict]:
@@ -355,7 +351,6 @@ def _history_dataframe(records: list[dict]) -> pd.DataFrame:
         return pd.DataFrame()
 
     df = pd.DataFrame(records).copy()
-    # Normalizo aqui para o dashboard não depender dos nomes crus da API.
     df["ordem"] = range(len(df), 0, -1)
     df["cenário"] = df["scenario"]
     df["falhas"] = df["failed_checks"].astype(int)
@@ -407,392 +402,205 @@ def _safe(value: object) -> str:
 
 
 def _apply_style() -> None:
-    st.markdown(
-        """
-        <style>
-        :root {
-            --bg: #f6f7fb;
-            --card: #ffffff;
-            --ink: #0f172a;
-            --muted: #64748b;
-            --line: #e5e7eb;
-            --blue: #2563eb;
-            --blue-soft: #eff6ff;
-            --gemini-blue: #1a73e8;
-            --gemini-green: #188038;
-            --green: #15803d;
-            --green-soft: #dcfce7;
-            --amber: #b45309;
-            --amber-soft: #fef3c7;
-        }
+    css = """
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-        .stApp {
-            background: var(--bg);
-            color: var(--ink);
-            font-family: "Aptos", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
-        }
+    :root {
+        --bg: #15120E;
+        --ink: #f2ede6;
+        --muted: #8a7f6f;
+        --muted2: #c9bfae;
+        --line: #332c22;
+        --accent: ACCENT_PLACEHOLDER;
+        --accent-soft: ACCENT_SOFT_PLACEHOLDER;
+        --accent-line: ACCENT_LINE_PLACEHOLDER;
+    }
 
-        .main .block-container {
-            max-width: 1360px;
-            padding-top: 1rem;
-            padding-bottom: 2rem;
-        }
+    .stApp {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Inter", system-ui, sans-serif;
+    }
 
-        header[data-testid="stHeader"],
-        div[data-testid="stToolbar"],
-        div[data-testid="stDecoration"] {
-            display: none;
-        }
+    .main .block-container {
+        max-width: 1120px;
+        padding-top: 3rem;
+        padding-bottom: 3rem;
+    }
 
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
+    header[data-testid="stHeader"],
+    div[data-testid="stToolbar"],
+    div[data-testid="stDecoration"] {
+        display: none;
+    }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
-        }
+    .c-kicker {
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        font-size: 0.7rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin: 0 0 0.6rem;
+    }
 
-        .brand-mark {
-            display: inline-grid;
-            place-items: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: var(--ink);
-            color: white;
-            font-size: 0.76rem;
-            font-weight: 700;
-        }
+    .c-h1 {
+        font-family: "Fraunces", serif;
+        font-weight: 500;
+        font-size: 2.35rem;
+        line-height: 1.1;
+        color: var(--ink);
+        margin: 0 0 1rem;
+        max-width: 46rem;
+        letter-spacing: -0.01em;
+    }
 
-        .brand strong {
-            display: block;
-            color: var(--ink);
-            font-size: 0.98rem;
-            line-height: 1.1;
-        }
+    .c-flow {
+        font-size: 0.85rem;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        padding-top: 1.4rem;
+        margin: 0 0 0.5rem;
+    }
+    .c-flow span { color: var(--accent); padding: 0 0.3rem; }
 
-        .brand small {
-            color: var(--muted);
-            font-size: 0.78rem;
-        }
+    .c-dl dt {
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.15rem;
+    }
+    .c-dl dd {
+        margin: 0 0 1.15rem;
+        font-size: 1rem;
+        color: var(--ink);
+        font-weight: 500;
+    }
+    .c-dl dd small {
+        display: block;
+        font-family: "Inter", sans-serif;
+        font-weight: 400;
+        font-size: 0.72rem;
+        color: var(--muted);
+        margin-top: 0.15rem;
+    }
 
-        .topbar nav {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.32rem;
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            background: var(--card);
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-        }
+    .c-quote {
+        font-family: "Fraunces", serif;
+        font-style: italic;
+        font-size: 0.86rem;
+        color: var(--muted2);
+        border-left: 2px solid var(--accent);
+        padding-left: 0.75rem;
+        margin-top: 0.6rem;
+    }
 
-        .topbar nav span,
-        .topbar nav a {
-            border-radius: 999px;
-            color: var(--muted);
-            font-size: 0.78rem;
-            font-weight: 600;
-            padding: 0.42rem 0.78rem;
-            text-decoration: none;
-            white-space: nowrap;
-        }
+    .c-fig-title {
+        font-family: "Fraunces", serif;
+        font-weight: 500;
+        font-size: 1.1rem;
+        color: var(--ink);
+        margin: 0 0 0.2rem;
+    }
+    .c-fig-cap {
+        font-size: 0.76rem;
+        color: var(--muted);
+        font-style: italic;
+        margin-bottom: 0.8rem;
+    }
+    .c-fig-foot {
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-top: 0.2rem;
+    }
 
-        .topbar nav .active {
-            background: var(--ink);
-            color: white;
-        }
+    .c-divider {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 2.2rem 0;
+    }
 
-        .hero {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 1.15rem 1.25rem;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: var(--card);
-            box-shadow: 0 14px 40px rgba(15, 23, 42, 0.05);
-        }
+    .c-box-n {
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+    }
+    .c-box h4 {
+        font-family: "Fraunces", serif;
+        font-weight: 500;
+        font-size: 1.05rem;
+        color: var(--ink);
+        margin: 0 0 0.7rem;
+    }
 
-        .hero p {
-            color: var(--blue);
-            font-size: 0.78rem;
-            font-weight: 700;
-            margin: 0 0 0.35rem 0;
-        }
+    .c-kv2, .c-kv2-block .c-kv2 {
+        font-size: 0.8rem;
+        color: var(--muted2);
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        border-bottom: 1px dotted var(--line);
+        padding: 0.4rem 0;
+    }
+    .c-kv2 b {
+        color: var(--ink);
+        font-weight: 500;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
 
-        .hero h1 {
-            color: var(--ink);
-            font-size: 2rem;
-            font-weight: 720;
-            letter-spacing: 0;
-            line-height: 1.05;
-            margin: 0;
-        }
-
-        .hero-meta {
-            display: flex;
-            gap: 0.45rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .hero-meta span,
-        .status-ok,
-        .status-warn {
-            border-radius: 999px;
-            font-size: 0.74rem;
-            font-weight: 700;
-            padding: 0.32rem 0.62rem;
-            white-space: nowrap;
-        }
-
-        .hero-meta span {
-            background: var(--blue-soft);
-            color: var(--blue);
-        }
-
-        .hero-meta .gemini-pill {
-            background: linear-gradient(135deg, #e8f0fe, #e6f4ea);
-            color: var(--gemini-blue);
-        }
-
-        .metric-card {
-            min-height: 118px;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: var(--card);
-            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
-            padding: 1rem;
-        }
-
-        .metric-card span {
-            color: var(--muted);
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 700;
-        }
-
-        .metric-card strong {
-            color: var(--ink);
-            display: block;
-            font-size: 1.9rem;
-            font-weight: 720;
-            line-height: 1.1;
-            margin: 0.45rem 0 0.7rem;
-        }
-
-        .status-ok {
-            background: var(--green-soft);
-            color: var(--green);
-        }
-
-        .status-warn {
-            background: var(--amber-soft);
-            color: var(--amber);
-        }
-
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
-        }
-
-        div[data-testid="stVerticalBlockBorderWrapper"] > div {
-            padding: 0.7rem 0.85rem 0.85rem;
-        }
-
-        .panel-title {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 0.55rem;
-        }
-
-        .panel-title h2 {
-            color: var(--ink);
-            font-size: 1rem;
-            font-weight: 720;
-            line-height: 1.2;
-            margin: 0;
-        }
-
-        .panel-title span {
-            color: var(--muted);
-            font-size: 0.76rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .gemini-summary {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 0.75rem;
-            padding: 0.1rem 0 0.85rem;
-        }
-
-        .run-result {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 0.75rem;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: #f8fafc;
-            margin-top: 0.85rem;
-            padding: 0.8rem;
-        }
-
-        .run-result span {
-            color: var(--muted);
-            display: block;
-            font-size: 0.74rem;
-            font-weight: 700;
-        }
-
-        .run-result strong {
-            color: var(--ink);
-            display: block;
-            font-size: 1.1rem;
-            font-weight: 760;
-            line-height: 1.15;
-            margin-top: 0.2rem;
-        }
-
-        .gemini-brand {
-            position: relative;
-            border: 1px solid #dbeafe;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 56%, #ecfdf3 100%);
-            margin-bottom: 0.8rem;
-            padding: 0.95rem;
-        }
-
-        .gemini-brand span {
-            color: var(--gemini-blue);
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 800;
-            margin-bottom: 0.1rem;
-        }
-
-        .gemini-brand strong {
-            color: var(--ink);
-            display: block;
-            font-size: 2.15rem;
-            font-weight: 780;
-            letter-spacing: 0;
-            line-height: 1;
-        }
-
-        .gemini-brand small {
-            position: absolute;
-            right: 0.85rem;
-            top: 0.85rem;
-        }
-
-        .gemini-summary span,
-        .detail-list span {
-            color: var(--muted);
-            font-size: 0.76rem;
-            font-weight: 650;
-        }
-
-        .gemini-summary strong {
-            color: var(--ink);
-            display: block;
-            font-size: 1.8rem;
-            font-weight: 720;
-            line-height: 1.05;
-            margin-top: 0.2rem;
-        }
-
-        .detail-list {
-            display: grid;
-            grid-template-columns: 76px minmax(0, 1fr);
-            gap: 0.45rem 0.8rem;
-            border-top: 1px solid var(--line);
-            padding-top: 0.75rem;
-        }
-
-        .detail-list.compact {
-            border-top: 0;
-            padding: 0.75rem 0 0;
-        }
-
-        .detail-list b {
-            color: var(--ink);
-            font-size: 0.8rem;
-            font-weight: 650;
-            overflow-wrap: anywhere;
-        }
-
-        div[data-testid="stDataFrame"] {
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .stSelectbox label,
-        .stCaptionContainer {
-            color: var(--muted) !important;
-            font-size: 0.82rem;
-        }
-
-        div[data-baseweb="select"] > div {
-            background: #f8fafc;
-            border-color: var(--line);
-            color: var(--ink);
-        }
-
-        .stButton button {
-            border-radius: 8px;
-            border: 1px solid var(--blue);
-            background: var(--blue);
-            color: white;
-            font-weight: 700;
-        }
-
-        .stButton button:hover {
-            border-color: #1d4ed8;
-            background: #1d4ed8;
-            color: white;
-        }
-
-        .stAlert {
-            border-radius: 8px;
-        }
-
-        @media (max-width: 820px) {
-            .topbar,
-            .hero {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .topbar nav {
-                flex-wrap: wrap;
-            }
-
-            .hero h1 {
-                font-size: 1.55rem;
-            }
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
+    /* Selects, botoes, tabela, expander e alerts do Streamlit no tema */
+    div[data-baseweb="select"] > div {
+        background: transparent;
+        border-color: var(--line);
+        color: var(--ink);
+        border-radius: 3px;
+    }
+    .stButton button {
+        border-radius: 3px;
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        font-weight: 600;
+    }
+    .stButton button:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--ink);
+    }
+    .stCaptionContainer, .stSelectbox label {
+        color: var(--muted) !important;
+        font-size: 0.78rem;
+    }
+    div[data-testid="stDataFrame"] {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    div[data-testid="stExpander"] {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+    }
+    .stAlert {
+        background: var(--accent-soft);
+        border: 1px solid var(--accent-line);
+        border-radius: 4px;
+        color: var(--ink);
+    }
+    """
+    css = (
+        css.replace("ACCENT_PLACEHOLDER", ACCENT)
+        .replace("ACCENT_SOFT_PLACEHOLDER", ACCENT_SOFT)
+        .replace("ACCENT_LINE_PLACEHOLDER", ACCENT_LINE)
     )
+    st.markdown(f"<style>\n{textwrap.dedent(css)}\n</style>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
