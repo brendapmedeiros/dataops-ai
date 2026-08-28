@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
 from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport
 from dataops_ai.tools.database_tools import DatabaseClient
 from dataops_ai.tools.log_tools import read_pipeline_logs
@@ -29,8 +31,9 @@ class InvestigationAgent:
             and log.get("payload", {}).get("scenario") == scenario
             and log.get("payload", {}).get("run_id") == run_id
         ][-1:]
-        rows_in_database = self.database.count_rows(table_name)
-        sample = self.database.query_database(f"select * from {table_name} limit 5")
+        table_exists = self.database.table_exists(table_name)
+        rows_in_database = self.database.count_rows(table_name) if table_exists else 0
+        sample = self.database.query_database(f"select * from {table_name} limit 5") if table_exists else pd.DataFrame()
 
         evidence = [
             f"A base {table_name} tem {rows_in_database} linha(s) carregada(s) no banco.",
@@ -51,6 +54,9 @@ class InvestigationAgent:
         for issue in failed_checks:
             column = f" na coluna {issue.column}" if issue.column else ""
             evidence.append(f"Falha de {issue.check_name}{column}: {issue.details}")
+
+        if failed_checks:
+            evidence.append("Padrão Circuit Breaker: O lote defeituoso foi isolado na Quarentena (DLQ) para proteger o banco de produção.")
 
         return InvestigationReport(
             agent_name="InvestigationAgent",

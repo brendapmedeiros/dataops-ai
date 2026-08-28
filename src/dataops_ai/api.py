@@ -98,6 +98,8 @@ class HistoryRecordResponse(BaseModel):
     llm_fallback_reason: str | None = None
     requires_manual_review: bool
     summary: str
+    quarantined: bool = False
+    audit_hash: str | None = None
     diagnosis_report_path: str
     incident_report_path: str
 
@@ -113,6 +115,9 @@ class RunResponse(BaseModel):
     validacoes_com_falha: int
     gravidade: str
     motor_do_diagnostico: str
+    quarentenado: bool = False
+    caminho_quarentena: str | None = None
+    audit_hash: str = ""
     provedor_llm: str
     modelo_llm: str | None = None
     api_llm: str | None = None
@@ -200,6 +205,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "validacoes_com_falha": len(result.quality_report.failed_checks),
             "gravidade": result.diagnosis.severity,
             "motor_do_diagnostico": result.diagnosis_engine,
+            "quarentenado": result.quarantined,
+            "caminho_quarentena": _relative_path(result.quarantine_path, app_settings.project_root) if result.quarantine_path else None,
+            "audit_hash": result.audit_hash,
             "provedor_llm": result.llm_metadata.provider,
             "modelo_llm": result.llm_metadata.model,
             "api_llm": result.llm_metadata.api,

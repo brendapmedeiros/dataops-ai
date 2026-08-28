@@ -7,6 +7,7 @@ from dataops_ai.agents.investigation_agent import InvestigationAgent
 from dataops_ai.agents.quality_agent import DataQualityAgent
 from dataops_ai.agents.resolution_agent import ResolutionAgent
 from dataops_ai.config import Settings
+from dataops_ai.contracts import find_default_contract
 from dataops_ai.models import PipelineRunResult
 from dataops_ai.pipelines.extract import extract_bcb_series
 from dataops_ai.pipelines.load import load_timeseries
@@ -16,6 +17,7 @@ from dataops_ai.tools.incident_tools import (
     append_incident_history_record,
     build_incident_history_record,
     create_incident_report,
+    generate_audit_hash,
     save_incident_history_record,
 )
 from dataops_ai.tools.log_tools import get_last_pipeline_run, write_pipeline_log
@@ -37,8 +39,52 @@ class AgentOrchestrator:
         processed_path = self.settings.processed_dir / "bcb_timeseries.csv"
         staged.to_csv(processed_path, index=False)
 
-        rows_loaded = load_timeseries(staged, self.settings.database_url)
-        quality_report = run_quality_checks(staged)
+        contract = find_default_contract(self.settings.project_root)
+        quality_report = run_quality_checks(staged, contract=contract)
+        failed_checks = quality_report.failed_checks
+
+        # Circuit Breaker: isolar dados defeituosos na Quarentena (DLQ)
+        if failed_checks:
+            quarantined = True
+            self.settings.dlq_dir.mkdir(parents=True, exist_ok=True)
+            quarantine_path = self.settings.dlq_dir / f"quarantine_{run_id}.csv"
+            staged.to_csv(quarantine_path, index=False)
+
+            quarantine_meta_path = self.settings.dlq_dir / f"quarantine_{run_id}_meta.json"
+            quarantine_meta_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "scenario": scenario,
+                        "quarantined_at": datetime.now(UTC).isoformat(),
+                        "failed_checks": [issue.model_dump(mode="json") for issue in failed_checks],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            rows_loaded = 0
+            write_pipeline_log(
+                self.settings.logs_dir,
+                "circuit_breaker_tripped",
+                {
+                    "run_id": run_id,
+                    "scenario": scenario,
+                    "quarantine_path": str(quarantine_path),
+                    "failed_checks": len(failed_checks),
+                },
+            )
+        else:
+            quarantined = False
+            quarantine_path = None
+            rows_loaded = load_timeseries(staged, self.settings.database_url)
+            write_pipeline_log(
+                self.settings.logs_dir,
+                "clean_data_loaded",
+                {"run_id": run_id, "scenario": scenario, "rows_loaded": rows_loaded},
+            )
+
         quality_agent = DataQualityAgent(
             self.settings.gemini_api_key,
             self.settings.gemini_model,
@@ -50,6 +96,7 @@ class AgentOrchestrator:
                 "scenario": scenario,
                 "run_id": run_id,
                 "rows_loaded": rows_loaded,
+                "quarantined": quarantined,
                 "last_pipeline_run": get_last_pipeline_run(self.settings.logs_dir),
             },
         )
@@ -61,7 +108,8 @@ class AgentOrchestrator:
                 "run_id": run_id,
                 "scenario": scenario,
                 "rows_loaded": rows_loaded,
-                "failed_checks": len(quality_report.failed_checks),
+                "quarantined": quarantined,
+                "failed_checks": len(failed_checks),
                 "severity": diagnosis.severity,
             },
         )
@@ -74,6 +122,9 @@ class AgentOrchestrator:
         )
         resolution = ResolutionAgent().build_plan(quality_report, diagnosis, investigation)
 
+        audit_payload = f"{run_id}:{scenario}:{quality_report.total_rows}:{len(failed_checks)}:{diagnosis.summary}:{quarantined}"
+        audit_hash = generate_audit_hash(run_id, audit_payload)
+
         self.settings.curated_dir.mkdir(parents=True, exist_ok=True)
         diagnosis_report_path = self.settings.curated_dir / "quality_diagnosis.json"
         incident_report_path = create_incident_report(
@@ -85,11 +136,16 @@ class AgentOrchestrator:
             quality_agent.llm_metadata.model_dump(mode="json"),
             investigation,
             resolution,
+            quarantined=quarantined,
+            audit_hash=audit_hash,
         )
         diagnosis_report_path.write_text(
             json.dumps(
                 {
                     "run_id": run_id,
+                    "quarantined": quarantined,
+                    "quarantine_path": str(quarantine_path) if quarantine_path else None,
+                    "audit_hash": audit_hash,
                     "quality_report": quality_report.model_dump(mode="json"),
                     "diagnosis": diagnosis.model_dump(mode="json"),
                     "diagnosis_engine": quality_agent.engine_used,
@@ -112,6 +168,8 @@ class AgentOrchestrator:
             resolution,
             str(diagnosis_report_path),
             str(incident_report_path),
+            quarantined=quarantined,
+            audit_hash=audit_hash,
         )
         history_path = append_incident_history_record(self.settings.curated_dir, history_record)
         save_incident_history_record(self.settings.database_url, history_record)
@@ -120,6 +178,9 @@ class AgentOrchestrator:
             run_id=run_id,
             scenario=scenario,
             rows_loaded=rows_loaded,
+            quarantined=quarantined,
+            quarantine_path=str(quarantine_path) if quarantine_path else None,
+            audit_hash=audit_hash,
             diagnosis_engine=quality_agent.engine_used,
             llm_metadata=quality_agent.llm_metadata,
             quality_report=quality_report,

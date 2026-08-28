@@ -84,3 +84,15 @@ class PipelineRunResult(BaseModel):
     diagnosis_report_path: str
     incident_report_path: str
     history_path: str
+    quarantined: bool = False
+    quarantine_path: str | None = None
+    audit_hash: str = ""
+
+
+class QuarantineRecord(BaseModel):
+    run_id: str
+    quarantined_at: datetime
+    scenario: str
+    failed_checks_count: int
+    reasons: list[str]
+    storage_path: str

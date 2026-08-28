@@ -1,0 +1,34 @@
+version: "1.0"
+dataset_name: "bcb_timeseries"
+description: "Contrato de dados para séries temporais do Banco Central do Brasil (SGS)."
+
+columns:
+  date:
+    type: "datetime"
+    nullable: false
+    unique: true
+    description: "Data da taxa apurada"
+  value:
+    type: "numeric"
+    nullable: false
+    min_value: 0.0
+    max_value: 100.0
+    description: "Valor apurado da taxa percentual"
+  series_code:
+    type: "numeric"
+    nullable: false
+    description: "Código da série no SGS"
+  source:
+    type: "text"
+    nullable: false
+    description: "Identificador da origem do dado"
+
+anomaly_rules:
+  zscore_drift:
+    enabled: true
+    column: "value"
+    threshold: 3.5
+    description: "Alerta se a variação exceder 3.5 desvios padrão em relação à média da série"
+  pii_audit:
+    enabled: true
+    description: "Verifica ausência de dados sensíveis ou pessoais (LGPD)"

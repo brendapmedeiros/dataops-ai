@@ -105,6 +105,11 @@ class DataQualityAgent:
             causes.append("Extração ou carga repetida, possivelmente sem regra de idempotência.")
         if "check_anomalies" in failed_names:
             causes.append("Falha ao converter valor numérico ou valor inesperado vindo da origem.")
+        if "check_drift_zscore" in failed_names:
+            causes.append("Variação atípica acentuada na série temporal (anomalia de drift estatístico).")
+        if "check_pii_exposure" in failed_names:
+            causes.append("Possível presença de dados sensíveis/pessoais (PII) violando regras de privacidade.")
+            severity = "critical"
 
         return AgentDiagnosis(
             agent_name="DataQualityAgent",

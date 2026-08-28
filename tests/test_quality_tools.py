@@ -39,6 +39,33 @@ class QualityToolsTest(unittest.TestCase):
 
         self.assertTrue(any(issue.column == "value" and issue.status == "fail" for issue in issues))
 
+    def test_check_drift_zscore_detects_severe_outlier(self) -> None:
+        from dataops_ai.tools.quality_tools import check_drift_zscore
+
+        # Série com 24 valores normais em torno de 10.0 e 1 outlier extremo de 100.0 (Z-score ~ 4.8)
+        values = [10.0] * 24 + [100.0]
+        df = pd.DataFrame({"value": values})
+
+        issue = check_drift_zscore(df, "value", threshold=3.0)
+        self.assertEqual(issue.status, "fail")
+        self.assertGreater(issue.rows_affected, 0)
+        self.assertIn("anomalia estatística", issue.details)
+
+    def test_check_pii_exposure_detects_cpf(self) -> None:
+        from dataops_ai.tools.quality_tools import check_pii_exposure
+
+        df = pd.DataFrame({"obs": ["Normal", "Cliente CPF: 123.456.789-00 registrado"]})
+        issue = check_pii_exposure(df)
+        self.assertEqual(issue.status, "fail")
+        self.assertIn("PII", issue.details)
+
+    def test_check_pii_exposure_passes_on_clean_data(self) -> None:
+        from dataops_ai.tools.quality_tools import check_pii_exposure
+
+        df = pd.DataFrame({"source": ["bcb_api", "bcb_api"]})
+        issue = check_pii_exposure(df)
+        self.assertEqual(issue.status, "pass")
+
 
 if __name__ == "__main__":
     unittest.main()

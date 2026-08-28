@@ -6,8 +6,10 @@ __pycache__/
 data/raw/*
 data/processed/*
 data/curated/*
+data/dlq/*
 logs/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/curated/.gitkeep
+!data/dlq/.gitkeep
 !logs/.gitkeep

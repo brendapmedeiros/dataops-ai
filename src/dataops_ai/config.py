@@ -41,6 +41,14 @@ class Settings:
         return self.project_root / "data" / "curated"
 
     @property
+    def dlq_dir(self) -> Path:
+        return self.project_root / "data" / "dlq"
+
+    @property
+    def contracts_dir(self) -> Path:
+        return self.project_root / "config" / "contracts"
+
+    @property
     def logs_dir(self) -> Path:
         return self.project_root / "logs"
 

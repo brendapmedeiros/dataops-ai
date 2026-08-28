@@ -8,32 +8,34 @@ DataOps AI é uma plataforma local para monitoramento de pipelines de dados com 
 BCB API
   -> Extraction
   -> Transform
-  -> Banco
-  -> Data Quality
+  -> Data Quality & Contracts (YAML)
+      -> Se Aprovado  -> Carga no Banco (Silver/Gold)
+      -> Se Reprovado -> Circuit Breaker: Quarentena (DLQ)
   -> Agent Orchestrator
-      -> DataQualityAgent
-      -> InvestigationAgent
-      -> ResolutionAgent
-  -> Relatórios
-  -> Histórico
+      -> DataQualityAgent (Drift estatístico, Anomalias, PII)
+      -> InvestigationAgent (Logs, Banco, Quarentena)
+      -> ResolutionAgent (Correções, Prevenção, Impacto)
+  -> Trilha de Auditoria (SHA-256 imutável)
+  -> Relatórios & Histórico
 ```
 
 ## Funcionalidades
 
 - Extração de dados da API SGS do Banco Central.
 - Transformação e padronização de séries temporais.
+- **Contratos de Dados Declarativos (YAML):** Regras de schema, nulabilidade e limites expressas em `config/contracts/`.
+- **Padrão Circuit Breaker / Dead Letter Queue (DLQ):** Se um lote violar o contrato de qualidade, a carga na tabela oficial é bloqueada e os registros são isolados em `data/dlq/` para proteger o banco analítico.
+- **Validações Avançadas de Qualidade:**
+  - Valores nulos e registros duplicados
+  - Mudança de estrutura (schema drift) e tipos inválidos
+  - Detecção estatística de anomalias por Z-Score (drift acentuado)
+  - Auditoria de privacidade e proteção contra vazamento de dados sensíveis (PII/LGPD)
+- **Segurança & Trilha de Auditoria:** Cada execução gera um hash criptográfico SHA-256 unívoco e imutável.
 - Carga local em SQLite ou PostgreSQL via `DATABASE_URL`.
-- Validações de qualidade:
-  - valores nulos
-  - registros duplicados
-  - mudança de estrutura
-  - tipos inválidos
-  - anomalias simples
 - Diagnóstico com Gemini via Interactions API, com saída estruturada e fallback local por regras.
-- Investigação baseada em banco e logs da pipeline.
+- Investigação baseada em banco, quarentena e logs da pipeline.
 - Plano de resolução com correções e prevenção.
-- Relatório de incidente em Markdown.
-- Histórico de execuções em JSONL e na tabela `incident_history`.
+- Relatório de incidente em Markdown e histórico auditável em JSONL e no banco.
 - `run_id` para rastrear logs, diagnóstico, investigação, resolução e histórico da mesma execução.
 
 ## Stack

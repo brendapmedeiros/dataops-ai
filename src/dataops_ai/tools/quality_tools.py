@@ -124,12 +124,110 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
     )
 
 
-def run_quality_checks(df: pd.DataFrame, dataset_name: str = "bcb_timeseries") -> QualityReport:
+def check_drift_zscore(
+    df: pd.DataFrame,
+    value_column: str = "value",
+    threshold: float = 3.5,
+) -> QualityIssue:
+    if value_column not in df.columns:
+        return QualityIssue(
+            check_name="check_drift_zscore",
+            status="pass",
+            column=value_column,
+            details="Coluna ausente; verificação de drift ignorada.",
+        )
+
+    numeric_values = pd.to_numeric(df[value_column], errors="coerce").dropna()
+    if len(numeric_values) < 3:
+        return QualityIssue(
+            check_name="check_drift_zscore",
+            status="pass",
+            column=value_column,
+            details="Amostra insuficiente para cálculo estatístico de drift.",
+        )
+
+    std = float(numeric_values.std())
+    if std == 0.0 or pd.isna(std):
+        return QualityIssue(
+            check_name="check_drift_zscore",
+            status="pass",
+            column=value_column,
+            details="Série estável sem desvio padrão apurável.",
+        )
+
+    mean = float(numeric_values.mean())
+    zscores = (numeric_values - mean).abs() / std
+    outliers = zscores[zscores > threshold]
+    outlier_count = len(outliers)
+
+    if outlier_count > 0:
+        max_z = float(outliers.max())
+        return QualityIssue(
+            check_name="check_drift_zscore",
+            status="fail",
+            column=value_column,
+            rows_affected=outlier_count,
+            details=(
+                f"{outlier_count} registro(s) com anomalia estatística severa "
+                f"(Z-score > {threshold}σ). Maior desvio observado: {max_z:.2f}σ."
+            ),
+        )
+
+    return QualityIssue(
+        check_name="check_drift_zscore",
+        status="pass",
+        column=value_column,
+        details=f"Valores dentro da distribuição normal esperada (Z-score <= {threshold}σ).",
+    )
+
+
+def check_pii_exposure(df: pd.DataFrame) -> QualityIssue:
+    import re
+
+    cpf_pattern = re.compile(r"\b\d{3}\.\d{3}\.\d{3}-\d{2}\b")
+    email_pattern = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+
+    found_pii: list[str] = []
+    text_cols = [col for col in df.columns if df[col].dtype == "object"]
+    for col in text_cols:
+        series_str = df[col].astype(str)
+        has_cpf = series_str.str.contains(cpf_pattern).any()
+        has_email = series_str.str.contains(email_pattern).any()
+        if has_cpf or has_email:
+            found_pii.append(col)
+
+    if found_pii:
+        return QualityIssue(
+            check_name="check_pii_exposure",
+            status="fail",
+            column=", ".join(found_pii),
+            rows_affected=len(df),
+            details=f"Possível vazamento de PII (CPF/email) detectado na(s) coluna(s): {', '.join(found_pii)}.",
+        )
+
+    return QualityIssue(
+        check_name="check_pii_exposure",
+        status="pass",
+        details="Nenhuma exposição de dados sensíveis (PII/LGPD) detectada.",
+    )
+
+
+def run_quality_checks(
+    df: pd.DataFrame,
+    dataset_name: str = "bcb_timeseries",
+    contract: object | None = None,
+) -> QualityReport:
     issues: list[QualityIssue] = []
-    issues.extend(compare_schema(df, EXPECTED_SCHEMA))
-    issues.extend(check_nulls(df, ["date", "value", "series_code"]))
-    issues.append(check_duplicates(df, ["date", "series_code"]))
+    expected_schema = getattr(contract, "expected_schema", EXPECTED_SCHEMA)
+    required_cols = getattr(contract, "required_columns", ["date", "value", "series_code"])
+    unique_cols = getattr(contract, "unique_columns", ["date", "series_code"]) or ["date", "series_code"]
+
+    issues.extend(compare_schema(df, expected_schema))
+    issues.extend(check_nulls(df, required_cols))
+    issues.append(check_duplicates(df, unique_cols))
     issues.append(check_anomalies(df, "value"))
+    issues.append(check_drift_zscore(df, "value"))
+    issues.append(check_pii_exposure(df))
 
     return QualityReport(
         dataset_name=dataset_name,

@@ -288,9 +288,11 @@ def _format_terminal_report(result) -> str:
         "",
         f"Run id: {result.run_id}",
         f"Cenário testado: {_scenario_label(result.scenario)}",
+        f"Status do lote: {'Isolado na Quarentena (DLQ)' if result.quarantined else 'Aprovado (Carga liberada)'}",
         f"Linhas carregadas: {result.rows_loaded}",
         f"Validações com falha: {len(failed_checks)}",
         f"Gravidade: {_severity_label(diagnosis.severity)}",
+        f"Audit Hash (SHA-256): {result.audit_hash[:16]}... ({result.audit_hash})" if result.audit_hash else "",
         f"Motor do diagnóstico: {engine_labels.get(result.diagnosis_engine, result.diagnosis_engine)}",
         f"LLM: {_format_llm_metadata(llm_metadata)}",
         "",
@@ -368,6 +370,8 @@ def _check_label(check_name: str) -> str:
         "check_schema": "estrutura",
         "check_types": "tipo",
         "check_anomalies": "anomalias",
+        "check_drift_zscore": "drift estatístico",
+        "check_pii_exposure": "segurança/PII",
     }
     return labels.get(check_name, check_name)
 
@@ -424,6 +428,8 @@ def _replace_internal_labels(text: str) -> str:
         "check_schema": "estrutura",
         "check_types": "tipo",
         "check_anomalies": "anomalias",
+        "check_drift_zscore": "drift estatístico",
+        "check_pii_exposure": "segurança/PII",
         "value": "valor",
         "date": "data",
         "series_code": "código da série",

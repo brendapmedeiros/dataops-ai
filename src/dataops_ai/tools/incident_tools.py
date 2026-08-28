@@ -8,6 +8,16 @@ from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport
 from dataops_ai.tools.database_tools import DatabaseClient
 
 
+import hashlib
+
+
+def generate_audit_hash(run_id: str, content: str) -> str:
+    hasher = hashlib.sha256()
+    hasher.update(run_id.encode("utf-8"))
+    hasher.update(content.encode("utf-8"))
+    return hasher.hexdigest()
+
+
 def create_incident_report(
     output_dir: Path,
     run_id: str,
@@ -17,13 +27,23 @@ def create_incident_report(
     llm_metadata: dict,
     investigation: InvestigationReport,
     resolution: ResolutionPlan,
+    quarantined: bool = False,
+    audit_hash: str | None = None,
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / "incident_report.md"
-    report_path.write_text(
-        _format_report(run_id, scenario, quality_report, diagnosis, llm_metadata, investigation, resolution),
-        encoding="utf-8",
+    content = _format_report(
+        run_id,
+        scenario,
+        quality_report,
+        diagnosis,
+        llm_metadata,
+        investigation,
+        resolution,
+        quarantined=quarantined,
+        audit_hash=audit_hash,
     )
+    report_path.write_text(content, encoding="utf-8")
     return report_path
 
 
@@ -71,6 +91,8 @@ def build_incident_history_record(
     resolution: ResolutionPlan,
     diagnosis_report_path: str,
     incident_report_path: str,
+    quarantined: bool = False,
+    audit_hash: str = "",
 ) -> dict:
     return {
         "run_id": run_id,
@@ -81,6 +103,8 @@ def build_incident_history_record(
         "failed_checks": len(quality_report.failed_checks),
         "severity": diagnosis.severity,
         "diagnosis_engine": diagnosis_engine,
+        "quarantined": quarantined,
+        "audit_hash": audit_hash,
         "llm_provider": llm_metadata.get("provider"),
         "llm_model": llm_metadata.get("model"),
         "llm_api": llm_metadata.get("api"),
@@ -167,14 +191,18 @@ def _format_report(
     llm_metadata: dict,
     investigation: InvestigationReport,
     resolution: ResolutionPlan,
+    quarantined: bool = False,
+    audit_hash: str | None = None,
 ) -> str:
     failed_checks = quality_report.failed_checks
+    status_label = "Isolado na Quarentena (DLQ) - Carga bloqueada" if quarantined else "Aprovado - Carga liberada na base"
     lines = [
         "# Relatório de incidente",
         "",
         f"- Run id: {run_id}",
         f"- Cenário: {scenario}",
         f"- Base: {quality_report.dataset_name}",
+        f"- Status do lote: {status_label}",
         f"- Linhas avaliadas: {quality_report.total_rows}",
         f"- Validações com falha: {len(failed_checks)}",
         f"- Gravidade: {_severity_label(diagnosis.severity)}",
@@ -215,6 +243,16 @@ def _format_report(
     lines.extend(["", "### Prevenção", ""])
     lines.extend(f"- {_humanize(item)}" for item in resolution.prevention_steps)
     lines.extend(["", f"- Revisão manual necessária: {'sim' if resolution.requires_manual_review else 'não'}", ""])
+
+    if audit_hash:
+        lines.extend(
+            [
+                "---",
+                f"**Trilha de Auditoria (SHA-256):** `{audit_hash}`",
+                "",
+            ]
+        )
+
     return "\n".join(lines)
 
 
