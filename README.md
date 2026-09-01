@@ -1,6 +1,6 @@
 # DataOps AI
 
-DataOps AI é uma plataforma local para monitoramento de pipelines de dados com agentes de IA. O projeto executa uma pipeline de séries temporais usando a API SGS do Banco Central, valida a qualidade dos dados, investiga incidentes e gera um plano de resolução com histórico rastreável por execução.
+DataOps AI é uma plataforma local e em nuvem para monitoramento de pipelines de dados com agentes de IA. O projeto executa uma pipeline de séries temporais usando a API SGS do Banco Central, valida a qualidade dos dados com contratos declarativos, investiga incidentes autonomamente e gera planos de resolução com histórico e trilha de auditoria imutável (SHA-256) por execução.
 
 ## Arquitetura
 
@@ -12,44 +12,40 @@ BCB API
       -> Se Aprovado  -> Carga no Banco (Silver/Gold)
       -> Se Reprovado -> Circuit Breaker: Quarentena (DLQ)
   -> Agent Orchestrator
-      -> DataQualityAgent (Drift estatístico, Anomalias, PII)
+      -> DataQualityAgent (Drift estatístico Z-Score, Anomalias, PII/LGPD)
       -> InvestigationAgent (Logs, Banco, Quarentena)
       -> ResolutionAgent (Correções, Prevenção, Impacto)
   -> Trilha de Auditoria (SHA-256 imutável)
   -> Relatórios & Histórico
+  -> Mission Pulse Dashboard (Streamlit + Bento Grid Design System)
 ```
 
 ## Funcionalidades
 
-- Extração de dados da API SGS do Banco Central.
-- Transformação e padronização de séries temporais.
-- **Contratos de Dados Declarativos (YAML):** Regras de schema, nulabilidade e limites expressas em `config/contracts/`.
-- **Padrão Circuit Breaker / Dead Letter Queue (DLQ):** Se um lote violar o contrato de qualidade, a carga na tabela oficial é bloqueada e os registros são isolados em `data/dlq/` para proteger o banco analítico.
+- **Extração & Transformação:** Integração com a API SGS do Banco Central e padronização de séries temporais.
+- **Contratos de Dados Declarativos (YAML):** Regras de schema, nulabilidade, limites e tipos expressas em `config/contracts/`.
+- **Padrão Circuit Breaker / Dead Letter Queue (DLQ):** Se um lote violar contratos de qualidade, a carga na tabela oficial é bloqueada imediatamente e os registros são isolados em `data/dlq/` para proteger o banco analítico.
 - **Validações Avançadas de Qualidade:**
   - Valores nulos e registros duplicados
   - Mudança de estrutura (schema drift) e tipos inválidos
   - Detecção estatística de anomalias por Z-Score (drift acentuado)
   - Auditoria de privacidade e proteção contra vazamento de dados sensíveis (PII/LGPD)
-- **Segurança & Trilha de Auditoria:** Cada execução gera um hash criptográfico SHA-256 unívoco e imutável.
-- Carga local em SQLite ou PostgreSQL via `DATABASE_URL`.
-- Diagnóstico com Gemini via Interactions API, com saída estruturada e fallback local por regras.
-- Investigação baseada em banco, quarentena e logs da pipeline.
-- Plano de resolução com correções e prevenção.
-- Relatório de incidente em Markdown e histórico auditável em JSONL e no banco.
-- `run_id` para rastrear logs, diagnóstico, investigação, resolução e histórico da mesma execução.
+- **Segurança & Trilha de Auditoria Criptográfica:** Cada execução gera uma assinatura SHA-256 inviolável que sela os dados processados e o diagnóstico dos agentes.
+- **Dashboard Mission Pulse (Bento Grid):** Interface moderna em Streamlit com Design System OLED Dark, telemetria em tempo real e console interativo de simulação de incidentes.
+- **Diagnóstico com Gemini & Fallback Autônomo:** Diagnóstico via Gemini Interactions API com saída estruturada em Pydantic e fallback local baseado em regras determinísticas.
+- **Persistência Híbrida:** Suporte a SQLite local ou PostgreSQL via `DATABASE_URL`.
+- **API REST FastAPI:** Microsserviço pronto para integração e execuções remotas.
 
 ## Stack
 
-- Python
-- Pandas
-- Pydantic
-- SQLite
-- SQLAlchemy
-- Gemini API
-- FastAPI
-- Streamlit
-- unittest
-- Git/GitHub
+- **Linguagem & Core:** Python 3.11+ / 3.12
+- **Processamento:** Pandas, NumPy
+- **Validação & Contratos:** Pydantic v2, PyYAML
+- **Banco de Dados:** SQLAlchemy v2, SQLite, PostgreSQL (psycopg2)
+- **IA & LLM:** Google Gemini API (Interactions API / `google-genai`)
+- **Backend:** FastAPI, Uvicorn, HTTPX
+- **Frontend & Visualização:** Streamlit, Altair, Vanilla CSS Design Tokens
+- **Testes & DevOps:** `unittest`, Docker, Docker Compose, Google Cloud Run
 
 ## Estrutura
 
@@ -81,18 +77,32 @@ src/dataops_ai/
   models.py
   scenarios.py
 
-data/
-  raw/
-  processed/
-  curated/
-
 dashboard/
-logs/
-tests/
-main.py
+  app.py                     # Orquestrador do frontend
+  styles/
+    theme.css                # Design System (Tokens OLED, cores semânticas, tipografia)
+  components/
+    hero.py                  # Hero Card com status e esfera bioluminescente
+    metrics.py               # Mini Cards 2x2 de métricas e KPIs
+    telemetry.py             # Pulso telemétrico com gráfico Altair neon
+    console.py               # Console de operações e diagnóstico SHA-256
+    audit.py                 # Drawer de auditoria com histórico detalhado
+
+config/
+  contracts/                 # Contratos de dados declarativos (YAML)
+
+data/
+  raw/                       # Dados brutos extraídos
+  processed/                 # Dados transformados
+  curated/                   # Relatórios e históricos consolidados
+  dlq/                       # Quarentena de lotes reprovados (Circuit Breaker)
+
+logs/                        # Logs estruturados em JSONL
+tests/                       # Suíte de testes unitários automatizados
+main.py                      # CLI do DataOps AI
 ```
 
-## Setup local
+## Setup Local
 
 ```bash
 python -m venv .venv
@@ -101,7 +111,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Para validar a instalação:
+Para validar a instalação e rodar os 31 testes unitários:
 
 ```bash
 python -m unittest discover -s tests
@@ -109,7 +119,7 @@ python -m unittest discover -s tests
 
 ## Configuração
 
-Crie um arquivo `.env` a partir de `.env.example`.
+Crie um arquivo `.env` a partir de `.env.example`:
 
 ```env
 GEMINI_API_KEY=
@@ -123,11 +133,10 @@ BCB_START_DATE=01/01/2024
 BCB_END_DATE=31/01/2024
 ```
 
-Sem `GEMINI_API_KEY`, o diagnóstico roda com regras locais.
+* Sem `GEMINI_API_KEY`, o diagnóstico opera com regras locais determinísticas de alta precisão.
+* `GEMINI_STORE_INTERACTIONS=true` permite registrar a interaction do Gemini para rastreabilidade temporária.
 
-`GEMINI_STORE_INTERACTIONS=true` permite registrar a interaction do Gemini para rastreabilidade temporária na API do Google. O projeto também salva localmente os metadados principais da chamada.
-
-## Banco de dados
+## Banco de Dados
 
 Por padrão, o projeto usa SQLite local:
 
@@ -159,37 +168,34 @@ Validar banco e API antes de executar a pipeline:
 python main.py status
 ```
 
-Rodar uma validação rápida do core:
+## Dashboard Mission Pulse (Streamlit)
 
+O dashboard oferece uma interface moderna no padrão **Bento Grid OLED Dark**, desacoplada em componentes modulares:
+
+1. **Hero Card:** Status consolidado de governança em tempo real (*100% Saudável*, *Proteção Ativa* ou *Sistema Pronto*) com indicadores de conexão da API BCB e do Banco de Dados.
+2. **KPIs Bento (2x2):**
+   - **Pipeline Health (%):** Taxa de aprovação das cargas sem anomalias.
+   - **Quarentena / DLQ:** Contador de lotes isolados pelo circuit breaker.
+   - **Volume Monitorado:** Total de execuções auditadas na série SGS.
+   - **Ações dos Agentes:** Contagem de investigações e revisões executadas pela IA.
+3. **Pulso Telemétrico (ECG):** Gráfico de onda contínua com curvas neon via Altair comparando falhas detectadas com o limiar de contrato (tolerância zero).
+4. **Console de Operações:** Disparo de execuções e injeção de falhas com exibição imediata do diagnóstico dos agentes e do **Hash SHA-256 criptográfico**.
+5. **Trilha de Auditoria (Drawer):** Histórico forense detalhado e pesquisável.
+
+### Executar o Dashboard:
+
+Localmente via Python:
 ```bash
-python main.py validar
+streamlit run dashboard/app.py
 ```
 
-Subir PostgreSQL e API juntos pelo Docker:
-
-```bash
-docker compose up --build api
-```
-
-A API fica disponível em:
-
-```text
-http://127.0.0.1:8000
-```
-
-Subir PostgreSQL, API e dashboard:
-
+Ou via Docker Compose:
 ```bash
 docker compose up --build dashboard
 ```
+Acesse em: `http://localhost:8501`
 
-O dashboard fica disponível em:
-
-```text
-http://127.0.0.1:8501
-```
-
-## Como executar
+## Como Executar via CLI
 
 Rodar a pipeline sem forçar incidente:
 
@@ -213,9 +219,9 @@ python main.py rodar --scenario tipo_invalido
 python main.py rodar --scenario timeout_api
 ```
 
-## API local
+## API FastAPI
 
-Subir a API:
+Subir a API localmente:
 
 ```bash
 uvicorn dataops_ai.api:app --reload
@@ -243,96 +249,53 @@ Exemplo de execução pela API:
 curl -X POST http://127.0.0.1:8000/execucoes -H "Content-Type: application/json" -d "{\"scenario\":\"tipo_invalido\"}"
 ```
 
-## Cenários simulados
+A documentação interativa Swagger fica disponível em: `http://127.0.0.1:8000/docs`
+
+## Cenários de Teste
 
 | Cenário | Descrição |
 |---|---|
-| `sem_incidente` | Executa a pipeline sem forçar erro. |
-| `valores_nulos` | Insere valor nulo em uma coluna obrigatória. |
-| `mudanca_estrutura` | Simula mudança de estrutura no dataset. |
-| `registros_duplicados` | Duplica registros para testar idempotência. |
-| `tipo_invalido` | Insere texto em campo numérico. |
-| `timeout_api` | Simula falha na API e uso de fallback local. |
+| `sem_incidente` | Executa a pipeline padrão sem forçar erros. |
+| `valores_nulos` | Insere valores nulos em colunas obrigatórias para testar regras de nulabilidade. |
+| `mudanca_estrutura` | Simula quebra de contrato e schema drift removendo colunas obrigatórias. |
+| `registros_duplicados` | Duplica registros para testar a idempotência e unicidade. |
+| `tipo_invalido` | Insere strings em colunas numéricas de taxas/valores. |
+| `timeout_api` | Simula falha de conexão na API BCB e disparo de fallback local. |
 
-## Saídas geradas
+## Deploy em Nuvem (Google Cloud Platform - GCP)
 
-A cada execução, o projeto gera artefatos em `data/curated/`:
+A aplicação está pronta para deploy no **Google Cloud Run (Serverless)**:
 
-```text
-quality_diagnosis.json
-incident_report.md
-incident_history.jsonl
-```
+1. **Artifact Registry:** Repositório Docker gerenciado.
+2. **Cloud Run (API):** Microsserviço FastAPI com escalabilidade automática e HTTPS gerenciado.
+3. **Cloud Run (Dashboard):** Frontend Streamlit conectado à URL da API.
+4. **Secret Manager:** Armazenamento seguro de chaves (`GEMINI_API_KEY`) e credenciais de banco.
 
-Também são gravados logs em:
-
-```text
-logs/pipeline_runs.jsonl
-```
-
-Quando o banco está configurado, o resumo da execução também é gravado na tabela:
-
-```text
-incident_history
-```
-
-## Gemini
-
-O `DataQualityAgent` usa Gemini como motor de diagnóstico quando `GEMINI_API_KEY` está configurada. A chamada principal usa a Interactions API com contrato de resposta baseado no modelo Pydantic `AgentDiagnosis`.
-
-Metadados salvos a cada execução:
-
-- provedor usado
-- modelo
-- API chamada
-- `interaction_id`, quando retornado
-- `previous_interaction_id`, quando houver ciclo com tool
-- formato da resposta
-- versão do prompt
-- latência
-- tools disponíveis para o agente
-- tools chamadas pelo Gemini
-- motivo de fallback, quando houver
-
-O provider também suporta function calling em um ciclo controlado: o Gemini pode pedir uma tool, a aplicação executa a função local e envia o resultado de volta usando `previous_interaction_id`. Nesta versão, o `DataQualityAgent` disponibiliza tools para consultar o relatório de qualidade e o contexto da execução.
-
-Se a chamada principal com Interactions falhar, o provider tenta `generateContent` como compatibilidade. Se o Gemini continuar indisponível, o projeto usa regras locais e registra o motivo no relatório.
-
-## Histórico
-
-Listar execuções recentes:
+Exemplo de deploy rápido com a CLI `gcloud`:
 
 ```bash
-python main.py historico
+# Deploy da API
+gcloud run deploy dataops-api \
+    --source . \
+    --region southamerica-east1 \
+    --allow-unauthenticated \
+    --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest" \
+    --port 8000 \
+    --command "uvicorn,dataops_ai.api:app,--host,0.0.0.0,--port,8000"
+
+# Deploy do Dashboard
+gcloud run deploy dataops-dashboard \
+    --source . \
+    --region southamerica-east1 \
+    --allow-unauthenticated \
+    --set-env-vars="DATAOPS_API_URL=https://dataops-api-xyz.a.run.app" \
+    --port 8501 \
+    --command "streamlit,run,dashboard/app.py,--server.port,8501,--server.address,0.0.0.0,--server.enableCORS,false,--server.enableXsrfProtection,false"
 ```
 
-Com PostgreSQL configurado, o comando consulta a tabela `incident_history`. Se a tabela ainda não existir, usa o arquivo `data/curated/incident_history.jsonl`.
+## Agentes Autônomos
 
-Exemplo de saída:
-
-```text
-Histórico recente de incidentes:
-- 20260817005902253788 | timeout na API | gravidade: baixa | falhas: 0 | revisão manual: sim
-```
-
-## Agentes
-
-### AgentOrchestrator
-
-Coordena a execução completa: pipeline, validações, diagnóstico, investigação, resolução e persistência dos relatórios.
-
-### DataQualityAgent
-
-Analisa o relatório de qualidade e gera o diagnóstico inicial. Usa Gemini quando configurado e fallback local quando não há chave ou quando a API falha.
-
-### InvestigationAgent
-
-Consulta logs e banco para levantar evidências do incidente. Também identifica falhas operacionais, como uso de fallback após timeout da API.
-
-### ResolutionAgent
-
-Gera plano de resolução com impacto, correções sugeridas, ações preventivas e indicação de revisão manual.
-
-## Roadmap
-
-- Expansão das regras de qualidade e contratos de schema.
+* **`AgentOrchestrator`:** Coordena a execução completa: pipeline, validações, diagnóstico, investigação, resolução e persistência dos relatórios.
+* **`DataQualityAgent`:** Analisa o relatório de qualidade, verifica drift estatístico (Z-Score) e vazamento de PII. Usa Gemini quando configurado e fallback local determinístico.
+* **`InvestigationAgent`:** Consulta logs, banco e a quarentena (DLQ) para levantar evidências forenses do incidente.
+* **`ResolutionAgent`:** Gera planos de resolução com correções sugeridas, ações preventivas, impacto e indicação de necessidade de revisão manual.
