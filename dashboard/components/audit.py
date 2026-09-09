@@ -5,8 +5,8 @@ import streamlit as st
 
 
 def render_audit_drawer(history_df: pd.DataFrame) -> None:
-    """Renders the expandable audit trail drawer with complete execution logs and SHA-256 proofs."""
-    with st.expander("Trilha Completa de Auditoria Imutável (Histórico Detalhado)", expanded=False):
+    """Renderiza auditoria com histórico completo e hash SHA-256."""
+    with st.expander("Histórico detalhado de execuções", expanded=False):
         if history_df.empty:
             st.info("Nenhuma execução gravada no histórico de auditoria.")
             return

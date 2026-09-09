@@ -14,6 +14,16 @@ class DatabaseClient:
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
 
+    def connect(self):
+        """Retorna uma conexão de contexto compatível com o banco configurado."""
+        if self.database_url.startswith("sqlite:///"):
+            db_path = Path(self.database_url.removeprefix("sqlite:///"))
+            return sqlite3.connect(db_path)
+
+        from sqlalchemy import create_engine
+        engine = create_engine(self.database_url)
+        return engine.connect()
+
     def ping(self) -> bool:
         if self.database_url.startswith("sqlite:///"):
             db_path = Path(self.database_url.removeprefix("sqlite:///"))

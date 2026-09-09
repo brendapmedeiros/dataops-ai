@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport
+from dataops_ai.models import AgentDiagnosis, CollaborationTurn, InvestigationReport, QualityReport
 from dataops_ai.tools.database_tools import DatabaseClient
 from dataops_ai.tools.log_tools import read_pipeline_logs
 
@@ -35,11 +35,18 @@ class InvestigationAgent:
         rows_in_database = self.database.count_rows(table_name) if table_exists else 0
         sample = self.database.query_database(f"select * from {table_name} limit 5") if table_exists else pd.DataFrame()
 
+        db_rows_txt = "1 linha carregada" if rows_in_database == 1 else f"{rows_in_database} linhas carregadas"
+        fails_txt = "1 falha" if len(failed_checks) == 1 else f"{len(failed_checks)} falhas"
+        total_rows_txt = "1 linha" if quality_report.total_rows == 1 else f"{quality_report.total_rows} linhas"
+        logs_count = len(logs)
+        verbo_logs = "Foi encontrado" if logs_count == 1 else "Foram encontrados"
+        logs_txt = "1 registro recente" if logs_count == 1 else f"{logs_count} registros recentes"
+
         evidence = [
-            f"A base {table_name} tem {rows_in_database} linha(s) carregada(s) no banco.",
-            f"A validação encontrou {len(failed_checks)} falha(s) em {quality_report.total_rows} linha(s).",
+            f"A base {table_name} tem {db_rows_txt} no banco.",
+            f"A validação encontrou {fails_txt} em {total_rows_txt}.",
             f"Run id da execução: {run_id}.",
-            f"Foram encontrados {len(logs)} registro(s) recente(s) de execução nos logs.",
+            f"{verbo_logs} {logs_txt} de execução nos logs.",
         ]
 
         if not sample.empty:
@@ -70,6 +77,39 @@ class InvestigationAgent:
             next_steps=self._build_next_steps(quality_report, diagnosis, bool(api_fallback_logs)),
         )
 
+    def build_turn_message(self, investigation: InvestigationReport) -> CollaborationTurn:
+        top_evidence = "; ".join(investigation.evidence[:2]) if investigation.evidence else "Nenhuma evidência extra."
+        return CollaborationTurn(
+            speaker="InvestigationAgent",
+            role="investigation",
+            message=f"Evidências levantadas: Hipótese técnica: '{investigation.hypothesis}'. Fatos apurados: {top_evidence}.",
+            action_taken="apuracao_evidencias",
+        )
+
+    def evaluate_alignment(
+        self,
+        quality_report: QualityReport,
+        diagnosis: AgentDiagnosis,
+        investigation: InvestigationReport,
+        context: dict | None = None,
+    ) -> tuple[bool, str]:
+        """Avalia se há necessidade de calibração ou divergência operacional que o QualityAgent deve ponderar."""
+        context = context or {}
+        api_fallback = any("fallback" in e.lower() for e in investigation.evidence)
+        quarantined = context.get("quarantined", False) or any("quarentena" in e.lower() for e in investigation.evidence)
+
+        if api_fallback and not any("fallback" in c.lower() or "api" in c.lower() for c in diagnosis.probable_causes):
+            return True, "Detectado uso de fallback na API externa; a causa raiz provém da origem e não da transformação."
+
+        if quarantined and diagnosis.severity == "critical":
+            return True, "Lote isolado na DLQ com sucesso pelo Circuit Breaker; o impacto em produção foi neutralizado."
+
+        if diagnosis.severity in {"high", "critical"} and len(quality_report.failed_checks) > 0:
+            sev_label = {"high": "ALTA", "critical": "CRÍTICA"}.get(diagnosis.severity, diagnosis.severity.upper())
+            return True, f"Severidade {sev_label} demanda refinamento formal com as evidências do banco e quarentena."
+
+        return False, "Diagnóstico preliminar e evidências técnicas estão em plena consonância."
+
     def _build_summary(self, failed_checks_count: int, rows_in_database: int, api_fallback_used: bool) -> str:
         if api_fallback_used and failed_checks_count == 0:
             return (
@@ -80,9 +120,11 @@ class InvestigationAgent:
         if failed_checks_count == 0:
             return "A investigação não encontrou incidente para aprofundar."
 
+        fails_txt = "1 falha" if failed_checks_count == 1 else f"{failed_checks_count} falhas"
+        db_rows_txt = "1 linha já carregada" if rows_in_database == 1 else f"{rows_in_database} linhas já carregadas"
         return (
-            f"A investigação confirmou {failed_checks_count} falha(s) de qualidade "
-            f"com {rows_in_database} linha(s) já carregada(s) no banco."
+            f"A investigação confirmou {fails_txt} de qualidade "
+            f"com {db_rows_txt} no banco."
         )
 
     def _build_hypothesis(

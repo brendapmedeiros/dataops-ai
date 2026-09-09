@@ -28,7 +28,7 @@ def render_hero_card(status: dict | None, history_df: pd.DataFrame) -> None:
         sub = f"Todas as últimas {total_runs} execuções passaram com contratos de dados íntegros."
     else:
         headline = "Proteção Ativa"
-        sub = f"Circuit breaker isolou {failed_runs} anomalia(s) na Quarentena (DLQ)."
+        sub = f"Circuit breaker isolou {failed_runs} anomalias na quarentena."
 
     api_chip_class = "chip-cyan" if api_ok else "chip-rose"
     api_chip_text = "ONLINE" if api_ok else "OFFLINE"

@@ -71,6 +71,20 @@ class ResolutionPlan(BaseModel):
     requires_manual_review: bool
 
 
+class CollaborationTurn(BaseModel):
+    speaker: str
+    role: str
+    message: str
+    action_taken: str | None = None
+
+
+class ConsensusReport(BaseModel):
+    status: Literal["consenso_direto", "consenso_refinado"] = "consenso_direto"
+    iterations: int = 1
+    supervisor_decision: str = "Consenso aprovado sem necessidade de calibração adicional."
+    conversation: list[CollaborationTurn] = Field(default_factory=list)
+
+
 class PipelineRunResult(BaseModel):
     run_id: str
     scenario: str
@@ -81,6 +95,7 @@ class PipelineRunResult(BaseModel):
     diagnosis: AgentDiagnosis
     investigation: InvestigationReport
     resolution: ResolutionPlan
+    collaboration: ConsensusReport = Field(default_factory=ConsensusReport)
     diagnosis_report_path: str
     incident_report_path: str
     history_path: str

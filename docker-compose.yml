@@ -10,6 +10,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./src:/app/src
+      - ./dashboard:/app/dashboard
       - ./data:/app/data
       - ./logs:/app/logs
     depends_on:
@@ -20,10 +22,18 @@ services:
     build:
       context: .
     container_name: dataops_ai_dashboard
+    env_file:
+      - .env
     environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/dataops_ai
       DATAOPS_API_URL: http://api:8000
     ports:
       - "8501:8501"
+    volumes:
+      - ./src:/app/src
+      - ./dashboard:/app/dashboard
+      - ./data:/app/data
+      - ./logs:/app/logs
     depends_on:
       - api
     command: streamlit run dashboard/app.py --server.address 0.0.0.0 --server.port 8501

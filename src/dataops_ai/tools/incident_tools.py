@@ -4,7 +4,13 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport, ResolutionPlan
+from dataops_ai.models import (
+    AgentDiagnosis,
+    ConsensusReport,
+    InvestigationReport,
+    QualityReport,
+    ResolutionPlan,
+)
 from dataops_ai.tools.database_tools import DatabaseClient
 
 
@@ -29,6 +35,7 @@ def create_incident_report(
     resolution: ResolutionPlan,
     quarantined: bool = False,
     audit_hash: str | None = None,
+    collaboration: ConsensusReport | None = None,
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / "incident_report.md"
@@ -42,6 +49,7 @@ def create_incident_report(
         resolution,
         quarantined=quarantined,
         audit_hash=audit_hash,
+        collaboration=collaboration,
     )
     report_path.write_text(content, encoding="utf-8")
     return report_path
@@ -58,6 +66,8 @@ def append_incident_history(
     resolution: ResolutionPlan,
     diagnosis_report_path: str,
     incident_report_path: str,
+    quarantined: bool = False,
+    audit_hash: str = "",
 ) -> Path:
     record = build_incident_history_record(
         run_id,
@@ -69,6 +79,8 @@ def append_incident_history(
         resolution,
         diagnosis_report_path,
         incident_report_path,
+        quarantined=quarantined,
+        audit_hash=audit_hash,
     )
     return append_incident_history_record(output_dir, record)
 
@@ -93,6 +105,7 @@ def build_incident_history_record(
     incident_report_path: str,
     quarantined: bool = False,
     audit_hash: str = "",
+    collaboration: ConsensusReport | None = None,
 ) -> dict:
     return {
         "run_id": run_id,
@@ -105,6 +118,8 @@ def build_incident_history_record(
         "diagnosis_engine": diagnosis_engine,
         "quarantined": quarantined,
         "audit_hash": audit_hash,
+        "collaboration_status": collaboration.status if collaboration else "consenso_direto",
+        "collaboration_summary": collaboration.supervisor_decision if collaboration else "",
         "llm_provider": llm_metadata.get("provider"),
         "llm_model": llm_metadata.get("model"),
         "llm_api": llm_metadata.get("api"),
@@ -161,6 +176,10 @@ def read_incident_history_from_database(
         "failed_checks",
         "severity",
         "diagnosis_engine",
+        "quarantined",
+        "audit_hash",
+        "collaboration_status",
+        "collaboration_summary",
         "llm_provider",
         "llm_model",
         "llm_api",
@@ -180,7 +199,11 @@ def read_incident_history_from_database(
     selected_columns = _existing_columns(database, table_name, columns)
     query = f"select {', '.join(selected_columns)} from {table_name} order by recorded_at desc limit {safe_limit}"
     rows = database.query_database(query)
-    return rows.to_dict(orient="records")
+    records = rows.to_dict(orient="records")
+    for r in records:
+        if "quarantined" in r:
+            r["quarantined"] = bool(r["quarantined"]) or int(r.get("failed_checks") or 0) > 0
+    return records
 
 
 def _format_report(
@@ -193,6 +216,7 @@ def _format_report(
     resolution: ResolutionPlan,
     quarantined: bool = False,
     audit_hash: str | None = None,
+    collaboration: ConsensusReport | None = None,
 ) -> str:
     failed_checks = quality_report.failed_checks
     status_label = "Isolado na Quarentena (DLQ) - Carga bloqueada" if quarantined else "Aprovado - Carga liberada na base"
@@ -208,17 +232,46 @@ def _format_report(
         f"- Gravidade: {_severity_label(diagnosis.severity)}",
         f"- LLM: {_format_llm_metadata(llm_metadata)}",
         "",
-        "## Diagnóstico",
-        "",
-        diagnosis.summary,
-        "",
-        "## Investigação",
-        "",
-        investigation.summary,
-        "",
-            "### Evidências",
-        "",
     ]
+
+    if collaboration:
+        status_txt = "Consenso Refinado (com calibração)" if collaboration.status == "consenso_refinado" else "Consenso Direto"
+        lines.extend(
+            [
+                "## Colaboração e Consenso Multiagente",
+                "",
+                f"- **Status:** {status_txt}",
+                f"- **Rodadas de debate:** {collaboration.iterations}",
+                f"- **Decisão do Supervisor:** {collaboration.supervisor_decision}",
+                "",
+                "### Diálogo entre os Agentes:",
+                "",
+            ]
+        )
+        for turn in collaboration.conversation:
+            role_label = {
+                "diagnosis": "Diagnóstico",
+                "investigation": "Investigação",
+                "calibration": "Calibração",
+                "action_plan": "Plano de Ação",
+            }.get(turn.role, turn.role.capitalize())
+            lines.append(f"- **{turn.speaker}** *({role_label})*: {turn.message}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Diagnóstico",
+            "",
+            diagnosis.summary,
+            "",
+            "## Investigação",
+            "",
+            investigation.summary,
+            "",
+            "### Evidências",
+            "",
+        ]
+    )
     lines.extend(f"- {_humanize(item)}" for item in investigation.evidence)
     lines.extend(
         [

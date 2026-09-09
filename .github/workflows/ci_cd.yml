@@ -1,0 +1,92 @@
+name: CI-CD DataOps AI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # rodo os testes unitarios e validacao de codigo
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configuro python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalo dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Executo suite de testes
+        run: pytest
+
+  # valido a sintaxe dos arquivos terraform
+  validate-infra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configuro o terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Verifico formatacao do terraform
+        run: terraform fmt -check infra/
+
+      - name: Valido configuracoes do terraform
+        run: |
+          cd infra
+          terraform init -backend=false
+          terraform validate
+
+  # publico os servicos no cloud run apenas na branch main quando as credenciais existirem
+  deploy:
+    needs: [test, validate-infra]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Autentico no gcp via workload identity federation
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configuro gcloud cli
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Autentico no artifact registry
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build e push da imagem api
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        run: |
+          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dataops-ai/api:${{ github.sha }} .
+          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dataops-ai/api:${{ github.sha }}
+
+      - name: Atualizo o servico cloud run da api
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        run: |
+          gcloud run deploy dataops-api \
+            --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dataops-ai/api:${{ github.sha }} \
+            --region us-central1 \
+            --quiet

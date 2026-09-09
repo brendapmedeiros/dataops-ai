@@ -7,7 +7,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from dataops_ai.tools.quality_tools import compare_schema, run_quality_checks
+from dataops_ai.tools.quality_tools import compare_schema, mask_sensitive_text, run_quality_checks
 
 
 class QualityToolsTest(unittest.TestCase):
@@ -65,6 +65,15 @@ class QualityToolsTest(unittest.TestCase):
         df = pd.DataFrame({"source": ["bcb_api", "bcb_api"]})
         issue = check_pii_exposure(df)
         self.assertEqual(issue.status, "pass")
+
+    def test_mask_sensitive_text_redacts_cpf_and_email(self) -> None:
+        # garante que mascara dados sensiveis
+        text = "usuario ana@email.com cpf 123.456.789-00"
+        masked = mask_sensitive_text(text)
+        self.assertNotIn("ana@email.com", masked)
+        self.assertNotIn("123.456.789-00", masked)
+        self.assertIn("123.***.***-00", masked)
+        self.assertIn("a***@email.com", masked)
 
 
 if __name__ == "__main__":

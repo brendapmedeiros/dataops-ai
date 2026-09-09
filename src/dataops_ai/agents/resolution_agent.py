@@ -1,6 +1,10 @@
-from __future__ import annotations
-
-from dataops_ai.models import AgentDiagnosis, InvestigationReport, QualityReport, ResolutionPlan
+from dataops_ai.models import (
+    AgentDiagnosis,
+    CollaborationTurn,
+    InvestigationReport,
+    QualityReport,
+    ResolutionPlan,
+)
 
 
 class ResolutionAgent:
@@ -23,6 +27,36 @@ class ResolutionAgent:
             prevention_steps=self._prevention_steps(failed_names, api_issue, missing_schema, type_issue),
             requires_manual_review=self._requires_manual_review(diagnosis, failed_names, api_issue, missing_schema),
         )
+
+    def build_plan_with_consensus(
+        self,
+        quality_report: QualityReport,
+        diagnosis: AgentDiagnosis,
+        investigation: InvestigationReport,
+        context: dict | None = None,
+    ) -> tuple[ResolutionPlan, CollaborationTurn]:
+        """Elabora o plano de ação harmonizado com o diagnóstico calibrado e as evidências da investigação."""
+        context = context or {}
+        plan = self.build_plan(quality_report, diagnosis, investigation)
+
+        # Se houver quarentena ativa, garante instrução sobre o arquivo isolado na DLQ
+        if context.get("quarantined") and not any("quarentena" in s.lower() or "dlq" in s.lower() for s in plan.correction_steps):
+            plan.correction_steps.insert(0, "Inspecionar o arquivo isolado na Quarentena (DLQ) antes de autorizar reprocessamento.")
+
+        steps_summary = "; ".join(plan.correction_steps[:2])
+        review_lbl = "Necessária" if plan.requires_manual_review else "Não requerida (Autônomo)"
+        consensus_msg = (
+            f"Plano consensual formulado: {plan.summary} "
+            f"Ações prioritárias: {steps_summary}. Revisão humana: {review_lbl}."
+        )
+
+        turn = CollaborationTurn(
+            speaker="ResolutionAgent",
+            role="action_plan",
+            message=consensus_msg,
+            action_taken="consenso_atingido",
+        )
+        return plan, turn
 
     def _summary(
         self,

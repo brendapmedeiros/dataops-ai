@@ -73,8 +73,37 @@ class ApiTest(unittest.TestCase):
             self.assertEqual(response.status_code, 400)
             self.assertIn("Cenário inválido", response.json()["detail"])
 
+    def test_run_pipeline_requires_api_key_when_configured(self) -> None:
+        # bloqueia requisicao sem api key quando configurada
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            settings = _test_settings(Path(temp_dir), api_key="minha-chave-secreta")
+            client = TestClient(create_app(settings))
 
-def _test_settings(root: Path) -> Settings:
+            res_no_key = client.post("/execucoes", json={"scenario": "timeout_api"})
+            self.assertEqual(res_no_key.status_code, 401)
+
+            res_wrong_key = client.post(
+                "/execucoes",
+                json={"scenario": "timeout_api"},
+                headers={"X-API-Key": "chave-errada"},
+            )
+            self.assertEqual(res_wrong_key.status_code, 401)
+
+    def test_run_pipeline_accepts_valid_api_key(self) -> None:
+        # permite execucao com a api key correta
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            settings = _test_settings(Path(temp_dir), api_key="minha-chave-secreta")
+            client = TestClient(create_app(settings))
+
+            res = client.post(
+                "/execucoes",
+                json={"scenario": "timeout_api"},
+                headers={"X-API-Key": "minha-chave-secreta"},
+            )
+            self.assertEqual(res.status_code, 200)
+
+
+def _test_settings(root: Path, api_key: str | None = None) -> Settings:
     return Settings(
         project_root=root,
         database_url=f"sqlite:///{root / 'test.db'}",
@@ -84,6 +113,7 @@ def _test_settings(root: Path) -> Settings:
         bcb_series_code=11,
         bcb_start_date="01/01/2024",
         bcb_end_date="05/01/2024",
+        api_key=api_key,
     )
 
 

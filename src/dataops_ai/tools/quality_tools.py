@@ -1,10 +1,23 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import re
 
 import pandas as pd
 
 from dataops_ai.models import QualityIssue, QualityReport
+
+# regexes compilados para deteccao e mascara de pii
+_CPF_REGEX = re.compile(r"\b(\d{3})\.\d{3}\.\d{3}-(\d{2})\b")
+_EMAIL_REGEX = re.compile(r"\b([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")
+
+
+def mask_sensitive_text(text: str) -> str:
+    # mascara dados sensiveis pra nao vazar pra api externa
+    if not text:
+        return text
+    masked = _CPF_REGEX.sub(r"\1.***.***-\2", text)
+    return _EMAIL_REGEX.sub(r"\1***@\2", masked)
 
 
 EXPECTED_SCHEMA = {
@@ -31,13 +44,14 @@ def check_nulls(df: pd.DataFrame, required_columns: list[str]) -> list[QualityIs
             continue
 
         null_count = int(df[column].isna().sum())
+        null_desc = "1 valor nulo encontrado" if null_count == 1 else f"{null_count} valores nulos encontrados"
         issues.append(
             QualityIssue(
                 check_name="check_nulls",
                 status="fail" if null_count else "pass",
                 column=column,
                 rows_affected=null_count,
-                details=f"{null_count} valor(es) nulo(s) encontrado(s) em {_column_label(column)}.",
+                details=f"{null_desc} em {_column_label(column)}.",
             )
         )
     return issues
@@ -54,11 +68,12 @@ def check_duplicates(df: pd.DataFrame, subset: list[str]) -> QualityIssue:
         )
 
     duplicate_count = int(df.duplicated(subset=subset).sum())
+    dup_desc = "1 linha duplicada" if duplicate_count == 1 else f"{duplicate_count} linhas duplicadas"
     return QualityIssue(
         check_name="check_duplicates",
         status="fail" if duplicate_count else "pass",
         rows_affected=duplicate_count,
-        details=f"{duplicate_count} linha(s) duplicada(s) usando {_join_columns(subset)}.",
+        details=f"{dup_desc} usando {_join_columns(subset)}.",
     )
 
 
@@ -115,12 +130,14 @@ def check_anomalies(df: pd.DataFrame, value_column: str = "value") -> QualityIss
     negative_count = int((numeric_values < 0).sum())
     affected = invalid_count + negative_count
 
+    inv_desc = "1 valor numérico inválido" if invalid_count == 1 else f"{invalid_count} valores numéricos inválidos"
+    neg_desc = "1 valor negativo" if negative_count == 1 else f"{negative_count} valores negativos"
     return QualityIssue(
         check_name="check_anomalies",
         status="fail" if affected else "pass",
         column=value_column,
         rows_affected=affected,
-        details=f"{invalid_count} valor(es) numérico(s) inválido(s) e {negative_count} valor(es) negativo(s).",
+        details=f"{inv_desc} e {neg_desc}.",
     )
 
 
@@ -162,13 +179,14 @@ def check_drift_zscore(
 
     if outlier_count > 0:
         max_z = float(outliers.max())
+        reg_desc = "1 registro" if outlier_count == 1 else f"{outlier_count} registros"
         return QualityIssue(
             check_name="check_drift_zscore",
             status="fail",
             column=value_column,
             rows_affected=outlier_count,
             details=(
-                f"{outlier_count} registro(s) com anomalia estatística severa "
+                f"{reg_desc} com anomalia estatística severa "
                 f"(Z-score > {threshold}σ). Maior desvio observado: {max_z:.2f}σ."
             ),
         )
@@ -197,12 +215,13 @@ def check_pii_exposure(df: pd.DataFrame) -> QualityIssue:
             found_pii.append(col)
 
     if found_pii:
+        cols_label = "na coluna" if len(found_pii) == 1 else "nas colunas"
         return QualityIssue(
             check_name="check_pii_exposure",
             status="fail",
             column=", ".join(found_pii),
             rows_affected=len(df),
-            details=f"Possível vazamento de PII (CPF/email) detectado na(s) coluna(s): {', '.join(found_pii)}.",
+            details=f"Possível vazamento de PII (CPF/email) detectado {cols_label}: {', '.join(found_pii)}.",
         )
 
     return QualityIssue(

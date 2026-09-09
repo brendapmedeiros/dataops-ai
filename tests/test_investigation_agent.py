@@ -44,7 +44,7 @@ class InvestigationAgentTest(unittest.TestCase):
 
             self.assertEqual(report.agent_name, "InvestigationAgent")
             self.assertTrue(report.evidence)
-            self.assertIn("2 linha(s)", " ".join(report.evidence))
+            self.assertIn("2 linhas", " ".join(report.evidence))
             self.assertTrue(report.next_steps)
 
     def test_investigation_detects_api_fallback_from_logs(self) -> None:

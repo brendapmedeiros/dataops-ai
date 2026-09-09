@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from dataops_ai.agents.orchestrator import AgentOrchestrator
@@ -100,6 +101,8 @@ class HistoryRecordResponse(BaseModel):
     summary: str
     quarantined: bool = False
     audit_hash: str | None = None
+    collaboration_status: str | None = None
+    collaboration_summary: str | None = None
     diagnosis_report_path: str
     incident_report_path: str
 
@@ -118,6 +121,9 @@ class RunResponse(BaseModel):
     quarentenado: bool = False
     caminho_quarentena: str | None = None
     audit_hash: str = ""
+    collaboration_status: str | None = None
+    collaboration_summary: str | None = None
+    collaboration: dict | None = None
     provedor_llm: str
     modelo_llm: str | None = None
     api_llm: str | None = None
@@ -188,15 +194,44 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def list_history(limit: int = Query(default=5, ge=1, le=50)) -> HistoryResponse:
         return {"historico": _read_history(app_settings, limit)}
 
+    @app.get("/execucoes/{run_id}/diagnostico", summary="Retorna o diagnóstico completo e diálogo da execução")
+    def get_execution_diagnosis(run_id: str) -> dict:
+        diagnosis_path = app_settings.curated_dir / f"quality_diagnosis_{run_id}.json"
+        if diagnosis_path.exists():
+            try:
+                return json.loads(diagnosis_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        latest_path = app_settings.curated_dir / "quality_diagnosis.json"
+        if latest_path.exists():
+            try:
+                data = json.loads(latest_path.read_text(encoding="utf-8"))
+                if str(data.get("run_id")) == str(run_id):
+                    return data
+            except Exception:
+                pass
+        return {}
+
     @app.post("/execucoes", response_model=RunResponse, summary="Executa a pipeline")
-    def run_pipeline(request: RunRequest) -> RunResponse:
+    def run_pipeline(
+        request: RunRequest,
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    ) -> RunResponse:
+        # valida a api key se estiver configurada
+        if app_settings.api_key and x_api_key != app_settings.api_key:
+            raise HTTPException(status_code=401, detail="Acesso não autorizado: chave de API inválida.")
+
         try:
             scenario = _normalize_scenario(request.scenario)
             result = AgentOrchestrator(app_settings).run(scenario, _scenario_label(scenario))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except RuntimeError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            # limpa excecoes e protege contra vazamento
+            raise HTTPException(
+                status_code=503,
+                detail="Erro ao executar a pipeline. Verifique os logs para detalhes.",
+            ) from exc
 
         return {
             "run_id": result.run_id,
@@ -208,6 +243,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "quarentenado": result.quarantined,
             "caminho_quarentena": _relative_path(result.quarantine_path, app_settings.project_root) if result.quarantine_path else None,
             "audit_hash": result.audit_hash,
+            "collaboration_status": result.collaboration.status,
+            "collaboration_summary": result.collaboration.supervisor_decision,
+            "collaboration": result.collaboration.model_dump() if result.collaboration else None,
             "provedor_llm": result.llm_metadata.provider,
             "modelo_llm": result.llm_metadata.model,
             "api_llm": result.llm_metadata.api,

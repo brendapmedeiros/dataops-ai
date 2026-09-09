@@ -1,0 +1,15 @@
+Status 200 OK não significa dado correto.
+
+A pior falha em dados não é quando o job quebra.
+É quando ele roda com "sucesso", mas entrega lixo direto no dashboard da diretoria.
+
+Se você só descobre anomalias quando o cliente reclama, você não tem DataOps. Tem sorte.
+
+Para resolver isso na prática, criei o DataOps AI:
+• Contratos de dados pré-ingestão
+• Circuit Breaker automático (dado ruim é isolado em quarentena)
+• Agentes de IA que investigam a causa raiz em vez de gerar texto genérico
+
+Menos ruído, zero alucinação na base oficial.
+
+👉 Arraste o carrossel para ver a arquitetura em 5 páginas.

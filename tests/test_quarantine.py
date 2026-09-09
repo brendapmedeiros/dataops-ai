@@ -54,6 +54,27 @@ class QuarantineCircuitBreakerTest(unittest.TestCase):
             self.assertIsNone(result.quarantine_path)
             self.assertTrue(bool(result.audit_hash))
 
+    def test_database_incident_history_preserves_quarantine_and_audit_hash(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            root = Path(temp_dir)
+            settings = Settings(
+                project_root=root,
+                database_url=f"sqlite:///{root / 'test.db'}",
+                gemini_api_key=None,
+                gemini_model="gemini-flash-latest",
+                gemini_store_interactions=True,
+                bcb_series_code=11,
+                bcb_start_date="01/01/2024",
+                bcb_end_date="05/01/2024",
+            )
+
+            result = AgentOrchestrator(settings).run("scenario_01_null_values", "valores nulos")
+            from dataops_ai.tools.incident_tools import read_incident_history_from_database
+            records = read_incident_history_from_database(settings.database_url, limit=5)
+            self.assertEqual(len(records), 1)
+            self.assertTrue(records[0]["quarantined"])
+            self.assertEqual(records[0]["audit_hash"], result.audit_hash)
+
 
 if __name__ == "__main__":
     unittest.main()
