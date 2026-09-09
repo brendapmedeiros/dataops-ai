@@ -128,7 +128,7 @@ def main() -> None:
         render_incidents_tab(history_df, settings.curated_dir)
 
     with tab_quarantine:
-        render_quarantine_tab(settings.dlq_dir)
+        render_quarantine_tab(settings.dlq_dir, database_url=settings.database_url)
 
     with tab_gold:
         render_data_viewer_tab(settings.database_url)

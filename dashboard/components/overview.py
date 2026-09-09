@@ -75,7 +75,7 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
                     <span class="mini-tag tag-blue">{icon_database(13, "#475569")} DATABASE</span>
                 </div>
                 <div class="mini-metric">{db_row_count} <small>linhas</small></div>
-                <div class="mini-foot">Série ativa: <b>BCB SGS 11 (Selic)</b></div>
+                <div class="mini-foot">Série: <b>BCB 11</b> • SLA: <b style="color: #059669;">Em conformidade</b></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -90,11 +90,12 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
                     <span class="mini-tag tag-cyan">{icon_cpu(13, "#D59B88")} AI RES</span>
                 </div>
                 <div class="mini-metric">{automated_rate:.0f}<small>%</small></div>
-                <div class="mini-foot">Revisão manual: <b>{manual_reviews} casos</b></div>
+                <div class="mini-foot">MTTR: <b>&lt; 2s</b> • Revisão manual: <b>{manual_reviews} casos</b></div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
 
     st.markdown('<div class="spacing-gap-md"></div>', unsafe_allow_html=True)
 

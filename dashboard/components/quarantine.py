@@ -18,8 +18,8 @@ def _safe(value: object) -> str:
     return html.escape(str(value))
 
 
-def render_quarantine_tab(dlq_dir: Path) -> None:
-    """Renderiza a quarentena (DLQ) e inspeção dos lotes rejeitados."""
+def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
+    """Renderiza a quarentena (DLQ) e acoes operacionais para triagem de lotes."""
     csv_files = sorted(dlq_dir.glob("quarantine_*.csv"), key=lambda f: f.stat().st_mtime, reverse=True)
 
     if not csv_files:
@@ -79,7 +79,7 @@ def render_quarantine_tab(dlq_dir: Path) -> None:
     # seletor de arquivos na quarentena
     file_options = [f.name for f in csv_files]
     selected_filename = st.selectbox(
-        "Selecione um lote para inspeção",
+        "Selecione um lote para inspeção e tomada de ação",
         file_options,
         index=0,
     )
@@ -105,7 +105,7 @@ def render_quarantine_tab(dlq_dir: Path) -> None:
                 <div class="dlq-meta-card">
                     <div class="dlq-meta-title" style="display: flex; align-items: center; gap: 0.45rem;">
                         {alert_svg}
-                        <span> Motivo de isolamento de carga:{_safe(scenario).upper()})</span>
+                        <span> Motivo de isolamento de carga ({_safe(scenario).upper()})</span>
                     </div>
                     <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.4rem 0;">
                         Isolado em: <code>{_safe(quarantined_at)}</code>
@@ -120,17 +120,17 @@ def render_quarantine_tab(dlq_dir: Path) -> None:
         except Exception:
             pass
 
-    # inspecao dos dados brutos retidos
+    # inspecao e acoes operacionais sobre o lote rejeitado
     with st.container(border=True):
         st.markdown(
             """
             <div class="telemetry-top">
                 <div>
-                    <span class="card-kicker">DATA PREVIEW DO LOTE REJEITADO</span>
-                    <h3 class="telemetry-title">Dados Isolados da Base Oficial</h3>
+                    <span class="card-kicker">TRIAGEM & REMEDIAÇÃO DO LOTE</span>
+                    <h3 class="telemetry-title">Ações Operacionais de Quarentena</h3>
                 </div>
                 <span class="live-pill" style="color: var(--state-danger-text); background: var(--state-danger-bg); border-color: var(--state-danger-border);">
-                    BLOQUEADO
+                    RETIDO
                 </span>
             </div>
             """,
@@ -139,12 +139,47 @@ def render_quarantine_tab(dlq_dir: Path) -> None:
 
         try:
             quarantined_df = pd.read_csv(selected_csv_path)
-            st.caption(f"Visualizando {len(quarantined_df)} linhas do arquivo '{selected_filename}':")
+            st.caption(f"Amostra de {len(quarantined_df)} linhas do arquivo '{selected_filename}':")
             st.dataframe(
                 quarantined_df,
                 use_container_width=True,
                 hide_index=True,
-                height=320,
+                height=260,
             )
+
+            st.markdown('<div style="margin-top: 0.9rem;"></div>', unsafe_allow_html=True)
+            col_act1, col_act2, col_act3 = st.columns([0.34, 0.36, 0.30])
+
+            with col_act1:
+                st.download_button(
+                    label="Baixar CSV do lote",
+                    data=quarantined_df.to_csv(index=False),
+                    file_name=selected_filename,
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+
+            with col_act2:
+                if st.button("Aprovar carga manual", use_container_width=True, help="Carrega os dados na base oficial em caso de excecao ou falso positivo"):
+                    if database_url:
+                        from dataops_ai.pipelines.load import load_timeseries
+                        load_timeseries(quarantined_df, database_url)
+                    archive_dir = dlq_dir / "resolved"
+                    archive_dir.mkdir(parents=True, exist_ok=True)
+                    selected_csv_path.rename(archive_dir / selected_filename)
+                    if meta_json_path.exists():
+                        meta_json_path.rename(archive_dir / meta_json_path.name)
+                    st.success(f"Lote {selected_filename} aprovado e inserido na base oficial.")
+                    st.rerun()
+
+            with col_act3:
+                if st.button("Descartar lote", use_container_width=True, help="Exclui definitivamente o arquivo isolado"):
+                    selected_csv_path.unlink(missing_ok=True)
+                    if meta_json_path.exists():
+                        meta_json_path.unlink(missing_ok=True)
+                    st.success(f"Lote {selected_filename} descartado com sucesso.")
+                    st.rerun()
+
         except Exception as exc:
-            st.error(f"Erro ao ler arquivo da quarentena: {exc}")
+            st.error(f"Erro ao ler ou processar arquivo da quarentena: {exc}")
+

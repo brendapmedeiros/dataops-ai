@@ -27,10 +27,34 @@ def render_incidents_tab(history_df: pd.DataFrame, curated_dir: Path) -> None:
         st.info("Nenhuma execução registrada no histórico para análise detalhada de incidentes.")
         return
 
-    # Seletor de Execução
+    # filtro de triagem operacional
+    col_filtro, col_metric = st.columns([0.7, 0.3])
+    with col_filtro:
+        filtro_severidade = st.radio(
+            "Filtrar incidentes por categoria",
+            ["Todos", "Apenas Quarentena (DLQ)", "Severidade Alta/Crítica", "Carga Aprovada"],
+            horizontal=True,
+        )
+
+    filtered_df = history_df.copy()
+    if filtro_severidade == "Apenas Quarentena (DLQ)":
+        filtered_df = filtered_df[filtered_df["quarentena"].str.contains("sim", case=False)]
+    elif filtro_severidade == "Severidade Alta/Crítica":
+        filtered_df = filtered_df[filtered_df["gravidade"].str.upper().isin(["ALTA", "CRÍTICA"])]
+    elif filtro_severidade == "Carga Aprovada":
+        filtered_df = filtered_df[~filtered_df["quarentena"].str.contains("sim", case=False)]
+
+    with col_metric:
+        st.caption(f"Exibindo {len(filtered_df)} de {len(history_df)} execuções registradas")
+
+    if filtered_df.empty:
+        st.info("Nenhum incidente encontrado para a categoria selecionada.")
+        return
+
+    # seletor de execucao baseado no filtro aplicado
     options = []
     run_map = {}
-    for idx, row in history_df.iterrows():
+    for idx, row in filtered_df.iterrows():
         run_id = str(row.get("run_id", f"run_{idx}"))
         cenario = str(row.get("cenário", ""))
         quarentenado = "sim" in str(row.get("quarentena", "")).lower()
@@ -42,12 +66,13 @@ def render_incidents_tab(history_df: pd.DataFrame, curated_dir: Path) -> None:
         run_map[label] = row
 
     selected_label = st.selectbox(
-        "Selecione para exibir detalhes de uma execução",
+        "Selecione para exibir detalhes da execução",
         options,
         index=0,
     )
     selected_row = run_map[selected_label]
     selected_run_id = str(selected_row.get("run_id", ""))
+
 
     # Tenta carregar o JSON completo de diagnóstico da execução
     diagnosis_data = _load_run_diagnosis(selected_run_id, curated_dir)
@@ -93,6 +118,7 @@ def render_incidents_tab(history_df: pd.DataFrame, curated_dir: Path) -> None:
     )
 
     diag_info = diagnosis_data.get("diagnosis", {}) if diagnosis_data else {}
+
     inv_info = diagnosis_data.get("investigation", {}) if diagnosis_data else {}
     res_info = diagnosis_data.get("resolution", {}) if diagnosis_data else {}
     collab_info = diagnosis_data.get("collaboration", {}) if diagnosis_data else {}
