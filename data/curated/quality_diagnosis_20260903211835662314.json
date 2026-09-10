@@ -1,0 +1,169 @@
+{
+  "run_id": "20260903211835662314",
+  "quarantined": true,
+  "quarantine_path": "C:\\Users\\brend\\Desktop\\DataOps AI\\data\\dlq\\quarantine_20260903211835662314.csv",
+  "audit_hash": "c89be5a31f0c98a55594e6c494a76ec0fb8c05099013c3ae54a61a576627ca3f",
+  "quality_report": {
+    "dataset_name": "bcb_timeseries",
+    "checked_at": "2026-09-03T21:18:35.834311Z",
+    "total_rows": 22,
+    "issues": [
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "Esperado: data. Encontrado: data."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "Esperado: texto. Encontrado: texto."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em data."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "fail",
+        "column": "value",
+        "rows_affected": 1,
+        "details": "1 valor(es) nulo(s) encontrado(s) em valor."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em código da série."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em origem."
+      },
+      {
+        "check_name": "check_duplicates",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "0 linha(s) duplicada(s) usando data."
+      },
+      {
+        "check_name": "check_anomalies",
+        "status": "fail",
+        "column": "value",
+        "rows_affected": 1,
+        "details": "1 valor(es) numérico(s) inválido(s) e 0 valor(es) negativo(s)."
+      },
+      {
+        "check_name": "check_drift_zscore",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Valores dentro da distribuição normal esperada (Z-score <= 3.5σ)."
+      },
+      {
+        "check_name": "check_pii_exposure",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "Nenhuma exposição de dados sensíveis (PII/LGPD) detectada."
+      }
+    ]
+  },
+  "diagnosis": {
+    "agent_name": "DataQualityAgent",
+    "severity": "high",
+    "summary": "A carga foi bloqueada pelo mecanismo de proteção após a detecção de um registro nulo e inválido no campo de valor da série temporal, direcionando o lote inteiro para a quarentena.",
+    "probable_causes": [
+      "Omissão ou falha no fornecimento do dado pela fonte externa no período coletado.",
+      "Problema de formatação ou parsing durante a extração que resultou em valor nulo e não numérico."
+    ],
+    "recommended_actions": [
+      "Examinar o registro isolado na pasta de quarentena para identificar a data afetada.",
+      "Avaliar o endpoint de origem para checar se o dado faltante foi republicado ou corrigido.",
+      "Definir regra de tratamento para valores ausentes ou reprocessar a carga após a correção na origem."
+    ],
+    "needs_investigation_agent": true
+  },
+  "diagnosis_engine": "gemini",
+  "llm_metadata": {
+    "provider": "gemini",
+    "model": "gemini-flash-latest",
+    "api": "interactions",
+    "interaction_id": "v1_ChdjT1NaYXRqMEUtNk82ZGtQeXVpX2dBWRIXY09TWmF0ajBFLTZPNmRrUHl1aV9nQVk",
+    "previous_interaction_id": null,
+    "response_format": "json_schema",
+    "prompt_version": "quality-diagnosis-v1",
+    "store_interaction": true,
+    "latency_ms": 65936,
+    "step_types": [
+      "thought",
+      "model_output"
+    ],
+    "tool_names": [
+      "consultar_relatorio_qualidade",
+      "consultar_contexto_execucao"
+    ],
+    "tool_calls": [],
+    "fallback_reason": null
+  },
+  "investigation": {
+    "agent_name": "InvestigationAgent",
+    "summary": "A investigação confirmou 2 falha(s) de qualidade com 22 linha(s) já carregada(s) no banco.",
+    "evidence": [
+      "A base bcb_timeseries tem 22 linha(s) carregada(s) no banco.",
+      "A validação encontrou 2 falha(s) em 22 linha(s).",
+      "Run id da execução: 20260903211835662314.",
+      "Foram encontrados 5 registro(s) recente(s) de execução nos logs.",
+      "A amostra do banco tem as colunas: date, value, series_code, source.",
+      "Falha de check_nulls na coluna value: 1 valor(es) nulo(s) encontrado(s) em valor.",
+      "Falha de check_anomalies na coluna value: 1 valor(es) numérico(s) inválido(s) e 0 valor(es) negativo(s).",
+      "Padrão Circuit Breaker: O lote defeituoso foi isolado na Quarentena (DLQ) para proteger o banco de produção."
+    ],
+    "hypothesis": "O problema está relacionado ao valor da série. A causa mais provável é dado ausente na origem ou falha de conversão durante a transformação.",
+    "next_steps": [
+      "Conferir o arquivo bruto salvo em data/raw.",
+      "Filtrar as linhas com valor vazio ou inválido no CSV processado.",
+      "Registrar o incidente para acompanhar a causa na próxima versão."
+    ]
+  },
+  "resolution": {
+    "agent_name": "ResolutionAgent",
+    "summary": "A correção principal é tratar valores ausentes ou inválidos antes da carga final.",
+    "impact": "A base não deve seguir para consumo sem revisão, porque o incidente pode afetar análises posteriores.",
+    "correction_steps": [
+      "Isolar as linhas com valor vazio ou inválido.",
+      "Verificar se o erro veio da origem ou da conversão no transform.",
+      "Definir regra: bloquear carga, descartar linha ou preencher valor conforme critério do dado."
+    ],
+    "prevention_steps": [
+      "Registrar o incidente no histórico da pipeline.",
+      "Criar regra de quarentena para linhas com valor inválido."
+    ],
+    "requires_manual_review": true
+  }
+}

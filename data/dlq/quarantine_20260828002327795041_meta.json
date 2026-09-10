@@ -1,0 +1,21 @@
+{
+  "run_id": "20260828002327795041",
+  "scenario": "scenario_01_null_values",
+  "quarantined_at": "2026-08-28T00:23:28.008522+00:00",
+  "failed_checks": [
+    {
+      "check_name": "check_nulls",
+      "status": "fail",
+      "column": "value",
+      "rows_affected": 1,
+      "details": "1 valor(es) nulo(s) encontrado(s) em valor."
+    },
+    {
+      "check_name": "check_anomalies",
+      "status": "fail",
+      "column": "value",
+      "rows_affected": 1,
+      "details": "1 valor(es) numérico(s) inválido(s) e 0 valor(es) negativo(s)."
+    }
+  ]
+}

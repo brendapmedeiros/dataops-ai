@@ -1,0 +1,152 @@
+{
+  "run_id": "20260903211821682801",
+  "quarantined": false,
+  "quarantine_path": null,
+  "audit_hash": "66e4418250e3df116c25761d2c9a813163a9e762998d6868ba41684f408c0784",
+  "quality_report": {
+    "dataset_name": "bcb_timeseries",
+    "checked_at": "2026-09-03T21:18:22.873051Z",
+    "total_rows": 22,
+    "issues": [
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "Esperado: data. Encontrado: data."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "Esperado: texto. Encontrado: texto."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em data."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em valor."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em código da série."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "0 valor(es) nulo(s) encontrado(s) em origem."
+      },
+      {
+        "check_name": "check_duplicates",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "0 linha(s) duplicada(s) usando data."
+      },
+      {
+        "check_name": "check_anomalies",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "0 valor(es) numérico(s) inválido(s) e 0 valor(es) negativo(s)."
+      },
+      {
+        "check_name": "check_drift_zscore",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Valores dentro da distribuição normal esperada (Z-score <= 3.5σ)."
+      },
+      {
+        "check_name": "check_pii_exposure",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "Nenhuma exposição de dados sensíveis (PII/LGPD) detectada."
+      }
+    ]
+  },
+  "diagnosis": {
+    "agent_name": "DataQualityAgent",
+    "severity": "low",
+    "summary": "Nenhum incidente de qualidade foi encontrado.",
+    "probable_causes": [
+      "A saída da pipeline bate com as regras de qualidade esperadas."
+    ],
+    "recommended_actions": [
+      "Continuar monitorando as próximas execuções da pipeline."
+    ],
+    "needs_investigation_agent": false
+  },
+  "diagnosis_engine": "regras_locais",
+  "llm_metadata": {
+    "provider": "local",
+    "model": null,
+    "api": "regras_locais",
+    "interaction_id": null,
+    "previous_interaction_id": null,
+    "response_format": null,
+    "prompt_version": "quality-diagnosis-v1",
+    "store_interaction": false,
+    "latency_ms": null,
+    "step_types": [],
+    "tool_names": [],
+    "tool_calls": [],
+    "fallback_reason": "sem falha de qualidade"
+  },
+  "investigation": {
+    "agent_name": "InvestigationAgent",
+    "summary": "A investigação não encontrou incidente para aprofundar.",
+    "evidence": [
+      "A base bcb_timeseries tem 22 linha(s) carregada(s) no banco.",
+      "A validação encontrou 0 falha(s) em 22 linha(s).",
+      "Run id da execução: 20260903211821682801.",
+      "Foram encontrados 5 registro(s) recente(s) de execução nos logs.",
+      "A amostra do banco tem as colunas: date, value, series_code, source."
+    ],
+    "hypothesis": "A execução parece consistente. Não há evidência de falha nas validações atuais.",
+    "next_steps": [
+      "Conferir o arquivo bruto salvo em data/raw."
+    ]
+  },
+  "resolution": {
+    "agent_name": "ResolutionAgent",
+    "summary": "Não há correção imediata para aplicar nesta execução.",
+    "impact": "Não foi identificado impacto relevante nesta execução.",
+    "correction_steps": [
+      "Manter monitoramento da pipeline."
+    ],
+    "prevention_steps": [
+      "Registrar o incidente no histórico da pipeline."
+    ],
+    "requires_manual_review": false
+  }
+}

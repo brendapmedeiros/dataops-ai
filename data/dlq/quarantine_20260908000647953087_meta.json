@@ -1,0 +1,21 @@
+{
+  "run_id": "20260908000647953087",
+  "scenario": "scenario_05_invalid_type",
+  "quarantined_at": "2026-09-08T00:06:48.327424+00:00",
+  "failed_checks": [
+    {
+      "check_name": "check_types",
+      "status": "fail",
+      "column": "value",
+      "rows_affected": 0,
+      "details": "Esperado: número. Encontrado: texto."
+    },
+    {
+      "check_name": "check_anomalies",
+      "status": "fail",
+      "column": "value",
+      "rows_affected": 1,
+      "details": "1 valor(es) numérico(s) inválido(s) e 0 valor(es) negativo(s)."
+    }
+  ]
+}

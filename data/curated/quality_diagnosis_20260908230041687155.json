@@ -1,0 +1,205 @@
+{
+  "run_id": "20260908230041687155",
+  "quarantined": true,
+  "quarantine_path": "/app/data/dlq/quarantine_20260908230041687155.csv",
+  "audit_hash": "f494bc123e7738a0b3f31c47798c65e32045c73e7eac3418066ca70142c988c6",
+  "quality_report": {
+    "dataset_name": "bcb_timeseries",
+    "checked_at": "2026-09-08T23:00:42.109940Z",
+    "total_rows": 22,
+    "issues": [
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "Esperado: data. Encontrado: data."
+      },
+      {
+        "check_name": "check_types",
+        "status": "fail",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: texto."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "Esperado: texto. Encontrado: texto."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em data."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em valor."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em código da série."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em origem."
+      },
+      {
+        "check_name": "check_duplicates",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "0 linhas duplicadas usando data."
+      },
+      {
+        "check_name": "check_anomalies",
+        "status": "fail",
+        "column": "value",
+        "rows_affected": 1,
+        "details": "1 valor numérico inválido e 0 valores negativos."
+      },
+      {
+        "check_name": "check_drift_zscore",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Valores dentro da distribuição normal esperada (Z-score <= 3.5σ)."
+      },
+      {
+        "check_name": "check_pii_exposure",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "Nenhuma exposição de dados sensíveis (PII/LGPD) detectada."
+      }
+    ]
+  },
+  "diagnosis": {
+    "agent_name": "DataQualityAgent",
+    "severity": "medium",
+    "summary": "O mecanismo de Circuit Breaker operou com sucesso, interceptando o lote do run 20260908230041687155 antes de atingir o banco de dados. A quarentena (DLQ) foi acionada devido a duas violações de qualidade na coluna 'value' (check_types identificando texto onde se esperava numérico e check_anomalies registrando 1 valor inválido em 22 linhas), preservando a integridade da tabela bcb_timeseries.",
+    "probable_causes": [
+      "Envio pontual de registro contendo string/caracteres alfanuméricos não numéricos na coluna 'value' pela fonte de dados.",
+      "Ausência de etapa resiliente de parsing, 'coerce' e higienização de tipos no pré-processamento antes da avaliação das regras de validação.",
+      "Comportamento inesperado ou formato inconsistente em registro específico da API do Banco Central."
+    ],
+    "recommended_actions": [
+      "Inspecionar o arquivo em quarentena em /app/data/dlq/quarantine_20260908230041687155.csv para identificar o registro anômalo e o valor exato que falhou a conversão.",
+      "Aprimorar a camada de transformação para aplicar coerção controlada (ex: pd.to_numeric com descarte ou sinalização em DLQ a nível de linha) antes dos checks globais.",
+      "Reprocessar o lote isolado da DLQ após correção pontual ou aplicação do tratamento adequado no pipeline de ingestão."
+    ],
+    "needs_investigation_agent": false
+  },
+  "diagnosis_engine": "gemini",
+  "llm_metadata": {
+    "provider": "gemini",
+    "model": "gemini-flash-latest",
+    "api": "interactions",
+    "interaction_id": "v1_ChdvcE9nYW9tNEhlcW1tdGtQdFBET3dBcxIXb3BPZ2FvbTRIZXFtbXRrUHRQRE93QXM",
+    "previous_interaction_id": null,
+    "response_format": "json_schema",
+    "prompt_version": "quality-diagnosis-v1",
+    "store_interaction": true,
+    "latency_ms": 9296,
+    "step_types": [
+      "thought",
+      "model_output"
+    ],
+    "tool_names": [
+      "consultar_relatorio_qualidade",
+      "consultar_contexto_execucao"
+    ],
+    "tool_calls": [],
+    "fallback_reason": null
+  },
+  "investigation": {
+    "agent_name": "InvestigationAgent",
+    "summary": "A investigação confirmou 2 falhas de qualidade com 5 linhas já carregadas no banco.",
+    "evidence": [
+      "A base bcb_timeseries tem 5 linhas carregadas no banco.",
+      "A validação encontrou 2 falhas em 22 linhas.",
+      "Run id da execução: 20260908230041687155.",
+      "Foram encontrados 5 registros recentes de execução nos logs.",
+      "A amostra do banco tem as colunas: date, value, series_code, source.",
+      "Falha de check_types na coluna value: Esperado: número. Encontrado: texto.",
+      "Falha de check_anomalies na coluna value: 1 valor numérico inválido e 0 valores negativos.",
+      "Padrão Circuit Breaker: O lote defeituoso foi isolado na Quarentena (DLQ) para proteger o banco de produção."
+    ],
+    "hypothesis": "O problema está ligado ao tipo do dado carregado. A coluna existe, mas chegou com formato diferente do esperado e precisa de conversão antes da carga final.",
+    "next_steps": [
+      "Conferir o arquivo bruto salvo em data/raw.",
+      "Inspecionar os valores que não foram convertidos para número.",
+      "Revisar a conversão de tipos na transformação antes da carga.",
+      "Filtrar as linhas com valor vazio ou inválido no CSV processado.",
+      "Registrar o incidente para acompanhar a causa na próxima versão."
+    ]
+  },
+  "resolution": {
+    "agent_name": "ResolutionAgent",
+    "summary": "A correção principal é corrigir a conversão de tipos antes da carga final.",
+    "impact": "O impacto parece limitado, mas a base precisa de ajuste antes de ser considerada confiável.",
+    "correction_steps": [
+      "Inspecionar o arquivo isolado na Quarentena (DLQ) antes de autorizar reprocessamento.",
+      "Inspecionar os valores que não foram convertidos para número.",
+      "Aplicar conversão numérica com tratamento para erro.",
+      "Separar registros inválidos antes de gravar a tabela final."
+    ],
+    "prevention_steps": [
+      "Registrar o incidente no histórico da pipeline.",
+      "Validar tipos das colunas obrigatórias antes de gravar no banco.",
+      "Criar regra de quarentena para linhas com valor inválido."
+    ],
+    "requires_manual_review": false
+  },
+  "collaboration": {
+    "status": "consenso_refinado",
+    "iterations": 2,
+    "supervisor_decision": "Supervisor recomendou calibração com base nas evidências apuradas: Severidade ALTA demanda refinamento formal com as evidências do banco e quarentena.",
+    "conversation": [
+      {
+        "speaker": "DataQualityAgent",
+        "role": "diagnosis",
+        "message": "Diagnóstico inicial: A carga foi interrompida e enviada para a área de quarentena devido à incompatibilidade de tipo no campo de valor, que chegou como texto em vez de número e continha um registro numérico inválido. (Severidade: HIGH). Causas prováveis levantadas: Envio de caracteres alfanuméricos, símbolos ou separadores decimais fora do padrão no campo numérico pela fonte de dados.; Falha na etapa de parsing ou tipagem dos dados durante o processo de extração e transformação..",
+        "action_taken": "diagnostico_inicial"
+      },
+      {
+        "speaker": "InvestigationAgent",
+        "role": "investigation",
+        "message": "Evidências levantadas: Hipótese técnica: 'O problema está ligado ao tipo do dado carregado. A coluna existe, mas chegou com formato diferente do esperado e precisa de conversão antes da carga final.'. Fatos apurados: A base bcb_timeseries tem 5 linhas carregadas no banco.; A validação encontrou 2 falhas em 22 linhas..",
+        "action_taken": "apuracao_evidencias"
+      },
+      {
+        "speaker": "DataQualityAgent",
+        "role": "calibration",
+        "message": "Diagnóstico calibrado via IA após contraponto da investigação: severidade ajustada para MEDIUM com foco na hipótese 'O problema está ligado ao tipo do dado carregado. A coluna existe, mas chegou com formato diferente do esperado e precisa de conversão antes da carga final.'.",
+        "action_taken": "calibracao_via_ia"
+      },
+      {
+        "speaker": "ResolutionAgent",
+        "role": "action_plan",
+        "message": "Plano consensual formulado: A correção principal é corrigir a conversão de tipos antes da carga final. Ações prioritárias: Inspecionar o arquivo isolado na Quarentena (DLQ) antes de autorizar reprocessamento.; Inspecionar os valores que não foram convertidos para número.. Revisão humana: Não requerida (Autônomo).",
+        "action_taken": "consenso_atingido"
+      }
+    ]
+  }
+}

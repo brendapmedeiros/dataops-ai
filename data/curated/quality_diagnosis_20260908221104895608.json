@@ -1,0 +1,191 @@
+{
+  "run_id": "20260908221104895608",
+  "quarantined": false,
+  "quarantine_path": null,
+  "audit_hash": "a5f3563ee7d0a5e13117043674e06b9bdd0e6f207f07add37508d1cb3db885e4",
+  "quality_report": {
+    "dataset_name": "bcb_timeseries",
+    "checked_at": "2026-09-08T22:11:04.920916Z",
+    "total_rows": 5,
+    "issues": [
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "Esperado: data. Encontrado: data."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "Esperado: número. Encontrado: número."
+      },
+      {
+        "check_name": "check_types",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "Esperado: texto. Encontrado: texto."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "date",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em data."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em valor."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "series_code",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em código da série."
+      },
+      {
+        "check_name": "check_nulls",
+        "status": "pass",
+        "column": "source",
+        "rows_affected": 0,
+        "details": "0 valores nulos encontrados em origem."
+      },
+      {
+        "check_name": "check_duplicates",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "0 linhas duplicadas usando data."
+      },
+      {
+        "check_name": "check_anomalies",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "0 valores numéricos inválidos e 0 valores negativos."
+      },
+      {
+        "check_name": "check_drift_zscore",
+        "status": "pass",
+        "column": "value",
+        "rows_affected": 0,
+        "details": "Série estável sem desvio padrão apurável."
+      },
+      {
+        "check_name": "check_pii_exposure",
+        "status": "pass",
+        "column": null,
+        "rows_affected": 0,
+        "details": "Nenhuma exposição de dados sensíveis (PII/LGPD) detectada."
+      }
+    ]
+  },
+  "diagnosis": {
+    "agent_name": "DataQualityAgent",
+    "severity": "low",
+    "summary": "Diagnóstico calibrado: a validação detectou inconformidade, mas a investigação confirmou origem em falha transitória da API externa (uso de fallback).",
+    "probable_causes": [
+      "Instabilidade na API do Banco Central com ativação de fallback operacional registrada nos logs.",
+      "A saída da pipeline bate com as regras de qualidade esperadas."
+    ],
+    "recommended_actions": [
+      "Continuar monitorando as próximas execuções da pipeline."
+    ],
+    "needs_investigation_agent": false
+  },
+  "diagnosis_engine": "regras_locais",
+  "llm_metadata": {
+    "provider": "local",
+    "model": null,
+    "api": "regras_locais",
+    "interaction_id": null,
+    "previous_interaction_id": null,
+    "response_format": null,
+    "prompt_version": "quality-diagnosis-v1",
+    "store_interaction": false,
+    "latency_ms": null,
+    "step_types": [],
+    "tool_names": [],
+    "tool_calls": [],
+    "fallback_reason": "sem falha de qualidade"
+  },
+  "investigation": {
+    "agent_name": "InvestigationAgent",
+    "summary": "A qualidade dos dados passou, mas a investigação encontrou falha operacional na coleta e uso de fallback.",
+    "evidence": [
+      "A base bcb_timeseries tem 5 linhas carregadas no banco.",
+      "A validação encontrou 0 falhas em 5 linhas.",
+      "Run id da execução: 20260908221104895608.",
+      "Foram encontrados 5 registros recentes de execução nos logs.",
+      "A amostra do banco tem as colunas: date, value, series_code, source.",
+      "Log de coleta: API não respondeu como esperado; fallback usado (fallback local, timeout simulado)."
+    ],
+    "hypothesis": "O incidente parece ter origem na coleta. Os logs mostram falha de acesso à API e uso de fallback antes da transformação.",
+    "next_steps": [
+      "Conferir o arquivo bruto salvo em data/raw.",
+      "Verificar se a API do Banco Central estava disponível no momento da coleta.",
+      "Reprocessar a extração quando a origem estiver estável.",
+      "Manter o fallback registrado nos logs para auditoria da execução."
+    ]
+  },
+  "resolution": {
+    "agent_name": "ResolutionAgent",
+    "summary": "A correção principal é operacional: validar a origem e reprocessar a coleta.",
+    "impact": "Os dados carregados passaram nas validações, mas a coleta usou fallback. Isso reduz confiança operacional e pede reprocessamento quando a origem estabilizar.",
+    "correction_steps": [
+      "Validar disponibilidade da API do Banco Central.",
+      "Reexecutar a extração sem fallback.",
+      "Comparar o novo arquivo bruto com o arquivo gerado durante o fallback."
+    ],
+    "prevention_steps": [
+      "Registrar o incidente no histórico da pipeline.",
+      "Adicionar alerta quando a pipeline usar fallback."
+    ],
+    "requires_manual_review": true
+  },
+  "collaboration": {
+    "status": "consenso_refinado",
+    "iterations": 2,
+    "supervisor_decision": "Supervisor recomendou calibração com base nas evidências apuradas: Detectado uso de fallback na API externa; a causa raiz provém da origem e não da transformação.",
+    "conversation": [
+      {
+        "speaker": "DataQualityAgent",
+        "role": "diagnosis",
+        "message": "Diagnóstico inicial: Nenhum incidente de qualidade foi encontrado. (Severidade: LOW). Causas prováveis levantadas: A saída da pipeline bate com as regras de qualidade esperadas..",
+        "action_taken": "diagnostico_inicial"
+      },
+      {
+        "speaker": "InvestigationAgent",
+        "role": "investigation",
+        "message": "Evidências levantadas: Hipótese técnica: 'O incidente parece ter origem na coleta. Os logs mostram falha de acesso à API e uso de fallback antes da transformação.'. Fatos apurados: A base bcb_timeseries tem 5 linhas carregadas no banco.; A validação encontrou 0 falhas em 5 linhas..",
+        "action_taken": "apuracao_evidencias"
+      },
+      {
+        "speaker": "DataQualityAgent",
+        "role": "calibration",
+        "message": "Diagnóstico calibrado com a investigação: Origem refinada para indisponibilidade na API externa. Severidade consolidada: LOW.",
+        "action_taken": "calibracao_regras"
+      },
+      {
+        "speaker": "ResolutionAgent",
+        "role": "action_plan",
+        "message": "Plano consensual formulado: A correção principal é operacional: validar a origem e reprocessar a coleta. Ações prioritárias: Validar disponibilidade da API do Banco Central.; Reexecutar a extração sem fallback.. Revisão humana: Necessária.",
+        "action_taken": "consenso_atingido"
+      }
+    ]
+  }
+}
