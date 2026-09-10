@@ -361,7 +361,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     font-size: 0.82rem;
     color: var(--text-secondary);
     background: var(--surface-card-subtle);
-    border-left: 3px solid #6366F1;
+    border-left: 3px solid #FAFAFA;
     padding: 0.6rem 0.85rem;
     border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
     margin: 0.3rem 0 0.6rem 0;

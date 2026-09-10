@@ -103,11 +103,11 @@ def render_collaboration_panel(
             role_label = _translate_role_label(role, action)
 
             stages_html.append(
-                f"""<div style="display: flex; gap: 0.75rem; padding: 0.8rem 1rem; border-left: 3px solid {border_color}; background: #16161A; border-radius: 0 6px 6px 0; border-top: 1px solid #27272A; border-right: 1px solid #27272A; border-bottom: 1px solid #27272A;">
+                f"""<div style="display: flex; gap: 0.75rem; padding: 0.8rem 1rem; border-left: 3px solid #FAFAFA; background: #16161A; border-radius: 0 6px 6px 0; border-top: 1px solid #27272A; border-right: 1px solid #27272A; border-bottom: 1px solid #27272A;">
 <div style="flex-shrink: 0; margin-top: 2px;">{svg_icon}</div>
 <div style="flex-grow: 1;">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
-<span style="font-size: 0.82rem; font-weight: 700; color: {text_color}; font-family: var(--font-ui, sans-serif);">{label_name}</span>
+<span style="font-size: 0.82rem; font-weight: 700; color: #FAFAFA; font-family: var(--font-ui, sans-serif);">{label_name}</span>
 <span style="font-size: 0.68rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: {tag_bg}; color: {text_color}; border: 1px solid #27272A;">Ciclo {idx} • {role_label}</span>
 </div>
 <p style="margin: 0; font-size: 0.84rem; line-height: 1.5; color: #A1A1AA;">{_safe(msg)}</p>
@@ -123,8 +123,8 @@ def render_collaboration_panel(
 </div>
 <span style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.02em; {badge_style}">{badge_text}</span>
 </div>
-<div style="background: #18181B; border: 1px solid #27272A; border-left: 3px solid #818CF8; border-radius: 0 6px 6px 0; padding: 0.65rem 0.95rem; margin-bottom: 0.85rem;">
-<div style="font-size: 0.70rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #71717A; margin-bottom: 0.2rem;">
+<div style="background: #18181B; border: 1px solid #27272A; border-left: 3px solid #FAFAFA; border-radius: 0 6px 6px 0; padding: 0.65rem 0.95rem; margin-bottom: 0.85rem;">
+<div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #FAFAFA; margin-bottom: 0.2rem;">
 Homologação e Despacho do Supervisor
 </div>
 <p style="margin: 0; font-size: 0.85rem; color: #F4F4F5; line-height: 1.45; font-weight: 500;">{_safe(supervisor_decision or 'Consenso operacional validado e homologado com os agentes especialistas.')}</p>
