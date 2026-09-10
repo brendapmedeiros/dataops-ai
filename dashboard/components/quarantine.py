@@ -18,6 +18,34 @@ def _safe(value: object) -> str:
     return html.escape(str(value))
 
 
+SCENARIO_FRIENDLY_NAMES = {
+    "none": "sem incidente",
+    "sem_incidente": "sem incidente",
+    "scenario_01_null_values": "valores nulos",
+    "valores_nulos": "valores nulos",
+    "scenario_02_missing_column": "mudança de estrutura",
+    "mudanca_estrutura": "mudança de estrutura",
+    "scenario_03_duplicate_records": "registros duplicados",
+    "registros_duplicados": "registros duplicados",
+    "scenario_04_api_timeout": "timeout de API",
+    "timeout_api": "timeout de API",
+    "scenario_05_invalid_type": "tipo de dado inválido",
+    "tipo_invalido": "tipo de dado inválido",
+}
+
+
+def _friendly_scenario_label(raw: str) -> str:
+    cleaned = str(raw or "não informado").lower().strip()
+    if cleaned in SCENARIO_FRIENDLY_NAMES:
+        return SCENARIO_FRIENDLY_NAMES[cleaned]
+    for k, v in SCENARIO_FRIENDLY_NAMES.items():
+        if k in cleaned:
+            return v
+    text = cleaned.replace("scenario_", "").replace("scenarios_", "")
+    text = "".join(c for c in text if not c.isdigit()).strip("_")
+    return text.replace("_", " ") or cleaned
+
+
 def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
     """Renderiza a quarentena (DLQ) e acoes operacionais para triagem de lotes."""
     csv_files = sorted(dlq_dir.glob("quarantine_*.csv"), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -97,6 +125,7 @@ def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
                 for r in reasons
             )
             scenario = meta_data.get("scenario", "não informado")
+            friendly_scenario = _friendly_scenario_label(scenario)
             quarantined_at = meta_data.get("quarantined_at", "")
             alert_svg = icon_shield_alert(15, "#FB7185")
 
@@ -105,7 +134,7 @@ def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
                 <div class="dlq-meta-card">
                     <div class="dlq-meta-title" style="display: flex; align-items: center; gap: 0.45rem;">
                         {alert_svg}
-                        <span> Motivo de isolamento de carga ({_safe(scenario).upper()})</span>
+                        <span>Motivo de isolamento: {_safe(friendly_scenario)}</span>
                     </div>
                     <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.4rem 0;">
                         Isolado em: <code>{_safe(quarantined_at)}</code>

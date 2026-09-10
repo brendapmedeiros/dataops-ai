@@ -79,6 +79,34 @@ PUBLIC_SCENARIOS = [
     {"nome": "timeout_api", "descricao": "simula falha de rede e fallback local"},
 ]
 
+FRIENDLY_SCENARIOS = {
+    "none": "sem incidente",
+    "sem_incidente": "sem incidente",
+    "scenario_01_null_values": "valores nulos",
+    "valores_nulos": "valores nulos",
+    "scenario_02_missing_column": "mudança de estrutura",
+    "mudanca_estrutura": "mudança de estrutura",
+    "scenario_03_duplicate_records": "registros duplicados",
+    "registros_duplicados": "registros duplicados",
+    "scenario_04_api_timeout": "timeout de API",
+    "timeout_api": "timeout de API",
+    "scenario_05_invalid_type": "tipo de dado inválido",
+    "tipo_invalido": "tipo de dado inválido",
+}
+
+
+def _friendly_scenario_label(value: object) -> str:
+    raw = str(value or "sem incidente").lower().strip()
+    if raw in FRIENDLY_SCENARIOS:
+        return FRIENDLY_SCENARIOS[raw]
+    for k, v in FRIENDLY_SCENARIOS.items():
+        if k in raw:
+            return v
+    clean = raw.replace("scenario_", "").replace("scenarios_", "")
+    clean = "".join(c for c in clean if not c.isdigit()).strip("_")
+    return clean.replace("_", " ") or raw
+
+
 ICON_PATH = PROJECT_ROOT / "dashboard" / "assets" / "dataops_badge.jpg"
 PAGE_ICON = str(ICON_PATH) if ICON_PATH.exists() else None
 
@@ -262,7 +290,7 @@ def _history_dataframe(records: list[dict]) -> pd.DataFrame:
 
     df = pd.DataFrame(records).copy()
     df["ordem"] = range(len(df), 0, -1)
-    df["cenário"] = df["scenario"]
+    df["cenário"] = df["scenario"].map(_friendly_scenario_label)
     df["falhas"] = df["failed_checks"].astype(int)
     df["gravidade"] = df["severity"].map(_severity_label)
     # Determina quarentena
