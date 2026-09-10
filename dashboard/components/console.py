@@ -32,12 +32,10 @@ def render_simulation_tab(
 ) -> None:
     """Renderiza a aba do simulador de falhas e injeção de anomalias."""
     st.markdown(
-        f"""
-        <div class="bento-card" style="padding: 1.35rem 1.6rem; margin-bottom: 1.25rem;">
-            <span class="card-kicker">Testes</span>
-            <h3 style="color: var(--text-primary); margin: 0.3rem 0 0.5rem 0; font-size: 1.3rem; font-weight: 700;">
-                Simulador de falhas e injeção de anomalias
-            </h3>
+        """
+        <div style="margin-bottom: 1rem;">
+            <span class="card-kicker">ENGENHARIA DE CAOS & AUDITORIA</span>
+            <h3 class="telemetry-title">Simulador de Injeção de Anomalias</h3>
         </div>
         """,
         unsafe_allow_html=True,
@@ -52,13 +50,11 @@ def render_simulation_tab(
     with col_action:
         with st.container(border=True):
             st.markdown(
-                f"""
+                """
                 <div class="telemetry-top">
                     <div>
                         <span class="card-kicker">DISPARO MANUAL</span>
-                        <h3 class="telemetry-title" style="display: flex; align-items: center; gap: 0.45rem;">
-                            Executar Cenário
-                        </h3>
+                        <h3 class="telemetry-title">Executar Cenário</h3>
                     </div>
                 </div>
                 """,
@@ -97,7 +93,7 @@ def render_simulation_tab(
                 quarantined = "sim" in str(latest.get("quarentena", "")).lower()
                 badge_cls = "badge-quarantine" if quarantined else "badge-approved"
                 badge_lbl = "ISOLADO NA QUARENTENA (DLQ)" if quarantined else "CARGA APROVADA"
-                badge_icon = icon_shield_alert(13, "#E11D48") if quarantined else icon_shield_check(13, "#059669")
+                badge_icon = icon_shield_alert(13, "#FB7185") if quarantined else icon_shield_check(13, "#4ADE80")
                 hash_val = str(latest.get("audit_hash") or "")
                 short_hash = f"{hash_val[:16]}..." if hash_val else "não calculado"
 
@@ -108,9 +104,9 @@ def render_simulation_tab(
                             <span class="diag-tag {badge_cls}">{badge_icon} {badge_lbl}</span>
                             <span class="diag-run">Última execução: <code>{_safe(latest.get("run_id"))}</code></span>
                         </div>
-                        <p class="diag-summary">“{_safe(latest.get("resumo", ""))}”</p>
+                        <p class="diag-summary">{_safe(latest.get("resumo", ""))}</p>
                         <div class="diag-hash-bar" style="display: flex; align-items: center; gap: 0.4rem;">
-                            {icon_lock(13, "#64748B")}
+                            {icon_lock(12, "#71717A")}
                             <span class="hash-label">AUDIT SHA-256:</span>
                             <code class="hash-text">{_safe(short_hash)}</code>
                         </div>
@@ -159,7 +155,7 @@ def render_run_inline_result(response: dict) -> None:
     quarantined = bool(response.get("quarentenado"))
     badge_cls = "badge-quarantine" if quarantined else "badge-approved"
     badge_lbl = "ISOLADO NA QUARENTENA (DLQ)" if quarantined else "CARGA APROVADA"
-    badge_icon = icon_shield_alert(13, "#E11D48") if quarantined else icon_shield_check(13, "#059669")
+    badge_icon = icon_shield_alert(13, "#FB7185") if quarantined else icon_shield_check(13, "#4ADE80")
     hash_val = response.get("audit_hash", "")
     short_hash = f"{hash_val[:16]}..." if hash_val else "sem hash"
 
@@ -170,9 +166,9 @@ def render_run_inline_result(response: dict) -> None:
                 <span class="diag-tag {badge_cls}">{badge_icon} {badge_lbl}</span>
                 <span class="diag-run">Run: <code>#{_safe(run_id[:12])}</code> | Falhas: <b>{response.get("validacoes_com_falha", 0)}</b></span>
             </div>
-            <p class="diag-summary">“{_safe(response.get("resumo", ""))}”</p>
+            <p class="diag-summary">{_safe(response.get("resumo", ""))}</p>
             <div class="diag-hash-bar" style="display: flex; align-items: center; gap: 0.4rem;">
-                {icon_lock(13, "#64748B")}
+                {icon_lock(12, "#71717A")}
                 <span class="hash-label">AUDIT HASH:</span>
                 <code class="hash-text">{_safe(short_hash)}</code>
             </div>
@@ -197,5 +193,5 @@ def render_run_inline_result(response: dict) -> None:
     render_collaboration_panel(
         collab,
         run_id=run_id,
-        title="Debate e Consenso Multiagente Desta Execução",
+        title="Governança Desta Execução: Análise de Causa Raiz & Resolução (RCA)",
     )

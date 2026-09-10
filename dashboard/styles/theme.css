@@ -1,93 +1,79 @@
-/* =============================================================================
-   DATAOPS AI    ============================================================================= */
+/* DATAOPS AI - DESIGN SYSTEM (LINEAR / VERCEL ENGINEERING DARK THEME) */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-    /* -------------------------------------------------------------------------
-       SURFACES & BACKGROUNDS (Clean Warm Light Hierarchy)
-       ------------------------------------------------------------------------- */
-    --surface-canvas: #F8FAFC;
-    --surface-card: #FFFFFF;
-    --surface-card-subtle: #F1F5F9;
-    --surface-card-hover: #FFFFFF;
-    --surface-elevated: #FFFFFF;
-    --surface-overlay: rgba(15, 23, 42, 0.45);
+    /* SURFACES & BACKGROUNDS (Deep Sleek Dark Hierarchy) */
+    --surface-canvas: #09090B;
+    --surface-card: #111114;
+    --surface-card-subtle: #18181B;
+    --surface-card-hover: #191920;
+    --surface-elevated: #1F1F24;
+    --surface-overlay: rgba(0, 0, 0, 0.75);
 
-    /* -------------------------------------------------------------------------
-       EDITORIAL ACCENTS (Terracotta / Coral & Minimal Neutrals)
-       ------------------------------------------------------------------------- */
-    --accent-terracotta: #D59B88;
-    --accent-terracotta-hover: #C58875;
-    --accent-terracotta-subtle: #FDF4F2;
-    --accent-terracotta-border: #F3DDD7;
-    --accent-slate: #334155;
+    /* EDITORIAL & ACCENT TOKENS */
+    --accent-primary: #FAFAFA;
+    --accent-primary-hover: #E4E4E7;
+    --accent-terracotta: #FAFAFA;
+    --accent-terracotta-hover: #E4E4E7;
+    --accent-terracotta-subtle: #18181B;
+    --accent-terracotta-border: #27272A;
+    --accent-slate: #94A3B8;
+    --accent-indigo: #818CF8;
 
-    /* -------------------------------------------------------------------------
-       SEMANTIC STATE TOKENS (Soft Modern Tones)
-       ------------------------------------------------------------------------- */
-    --state-success: #059669;
-    --state-success-text: #065F46;
-    --state-success-bg: #ECFDF5;
-    --state-success-border: #A7F3D0;
+    /* SEMANTIC STATE TOKENS (Vibrant Dark-Contrast Engineering Colors) */
+    --state-success: #10B981;
+    --state-success-text: #4ADE80;
+    --state-success-bg: rgba(16, 185, 129, 0.10);
+    --state-success-border: rgba(16, 185, 129, 0.28);
 
-    --state-danger: #E11D48;
-    --state-danger-text: #9F1239;
-    --state-danger-bg: #FFF1F2;
-    --state-danger-border: #FECDD3;
+    --state-danger: #F43F5E;
+    --state-danger-text: #FB7185;
+    --state-danger-bg: rgba(244, 63, 94, 0.10);
+    --state-danger-border: rgba(244, 63, 94, 0.28);
 
-    --state-warning: #D97706;
-    --state-warning-text: #92400E;
-    --state-warning-bg: #FFFBEB;
-    --state-warning-border: #FDE68A;
+    --state-warning: #F59E0B;
+    --state-warning-text: #FCD34D;
+    --state-warning-bg: rgba(245, 158, 11, 0.10);
+    --state-warning-border: rgba(245, 158, 11, 0.28);
 
-    --state-info: #2563EB;
-    --state-info-text: #1E40AF;
-    --state-info-bg: #EFF6FF;
-    --state-info-border: #BFDBFE;
+    --state-info: #3B82F6;
+    --state-info-text: #60A5FA;
+    --state-info-bg: rgba(59, 130, 246, 0.10);
+    --state-info-border: rgba(59, 130, 246, 0.28);
 
-    /* -------------------------------------------------------------------------
-       TYPOGRAPHY (High-Contrast Editorial Typography)
-       ------------------------------------------------------------------------- */
+    /* TYPOGRAPHY */
     --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #64748B;
-    --text-dim: #94A3B8;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --text-dim: #52525B;
 
-    /* -------------------------------------------------------------------------
-       BORDERS & DIVIDERS
-       ------------------------------------------------------------------------- */
-    --border-subtle: #F1F5F9;
-    --border-card: #EAECEF;
-    --border-card-hover: #CBD5E1;
-    --border-divider: #E2E8F0;
+    /* BORDERS & DIVIDERS */
+    --border-subtle: #1C1C20;
+    --border-card: #27272A;
+    --border-card-hover: #3F3F46;
+    --border-divider: #27272A;
 
-    /* -------------------------------------------------------------------------
-       RADII
-       ------------------------------------------------------------------------- */
-    --radius-xs: 6px;
-    --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 18px;
-    --radius-xl: 22px;
-    --radius-badge: 5px;
+    /* RADII */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-badge: 4px;
     --radius-full: 9999px;
 
-    /* -------------------------------------------------------------------------
-       ELEVATIONS & SHADOWS
-       ------------------------------------------------------------------------- */
-    --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.04);
-    --shadow-card: 0 2px 14px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02);
-    --shadow-card-hover: 0 8px 26px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.03);
+    /* ELEVATIONS & SHADOWS */
+    --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-/* =============================================================================
-   BASE STREAMLIT RESET & CLEANUP
-   ============================================================================= */
+/* BASE STREAMLIT RESET & CLEANUP */
 .stApp {
     background-color: var(--surface-canvas) !important;
     background-image: none !important;
@@ -125,36 +111,26 @@ a.anchor-link {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
+    background: #27272A;
     border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
+    background: #3F3F46;
 }
 
-/* =============================================================================
-   EDITORIAL SIGNATURE ACCENT BAR
-   ============================================================================= */
 .editorial-bar {
-    width: 32px;
-    height: 3.5px;
-    background-color: var(--accent-terracotta);
-    border-radius: 2px;
-    margin-bottom: 0.85rem;
-    display: inline-block;
+    display: none !important;
 }
 
-/* =============================================================================
-   CLEAN MINIMAL CARD CONTAINERS
-   ============================================================================= */
+/* CLEAN MINIMAL CARD CONTAINERS */
 .bento-card,
 div[data-testid="stVerticalBlockBorderWrapper"] {
     background: var(--surface-card) !important;
     border: 1px solid var(--border-card) !important;
-    border-radius: var(--radius-xl) !important;
+    border-radius: var(--radius-lg) !important;
     box-shadow: var(--shadow-card) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease !important;
     position: relative !important;
     box-sizing: border-box !important;
 }
@@ -165,14 +141,21 @@ div[data-testid="stVerticalBlockBorderWrapper"]:hover {
     box-shadow: var(--shadow-card-hover) !important;
 }
 
-/* Streamlit Container Specifics */
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    padding: 1.4rem 1.6rem !important;
-    min-height: 380px !important;
+    padding: 1.25rem 1.45rem !important;
+    min-height: auto !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-start !important;
     overflow: visible !important;
+}
+
+/* DATA TABLES & DATAFRAMES */
+div[data-testid="stDataFrame"],
+div[data-testid="stTable"] {
+    background: var(--surface-card) !important;
+    border: 1px solid var(--border-card) !important;
+    border-radius: var(--radius-md) !important;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock"] {
@@ -182,31 +165,29 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     width: 100% !important;
 }
 
-/* =============================================================================
-   CHIPS & STATUS BADGES (Minimal Pastel & Neutral)
-   ============================================================================= */
+/* CHIPS & STATUS BADGES */
 .chip {
     font-family: var(--font-ui);
     font-size: 0.72rem;
-    padding: 0.28rem 0.65rem;
+    padding: 0.24rem 0.6rem;
     border-radius: var(--radius-badge);
     font-weight: 600;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
     line-height: 1;
 }
 
 .chip-blue {
-    background: var(--surface-card-subtle);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-divider);
+    background: #18181B;
+    color: #A1A1AA;
+    border: 1px solid #27272A;
 }
 
 .chip-cyan {
-    background: var(--accent-terracotta-subtle);
-    color: var(--accent-terracotta-hover);
-    border: 1px solid var(--accent-terracotta-border);
+    background: rgba(129, 140, 248, 0.12);
+    color: #A5B4FC;
+    border: 1px solid rgba(129, 140, 248, 0.25);
 }
 
 .chip-emerald {
@@ -221,12 +202,10 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     border: 1px solid var(--state-danger-border);
 }
 
-/* =============================================================================
-   MINI METRICS CARDS (Editorial Statistic Tiles)
-   ============================================================================= */
+/* MINI METRICS CARDS */
 .mini-card {
-    padding: 1.25rem 1.45rem;
-    min-height: 135px;
+    padding: 1.15rem 1.35rem;
+    min-height: 125px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -236,21 +215,22 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
 }
 
 .mini-label {
-    font-size: 0.82rem;
+    font-size: 0.74rem;
     color: var(--text-muted);
     font-weight: 600;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .mini-tag {
     font-family: var(--font-ui);
     font-size: 0.65rem;
-    font-weight: 700;
-    padding: 0.2rem 0.55rem;
+    font-weight: 600;
+    padding: 0.18rem 0.5rem;
     border-radius: var(--radius-badge);
     display: inline-flex;
     align-items: center;
@@ -265,22 +245,23 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
 }
 
 .tag-cyan {
-    color: var(--accent-terracotta);
-    background: var(--accent-terracotta-subtle);
-    border: 1px solid var(--accent-terracotta-border);
+    color: #A5B4FC;
+    background: rgba(129, 140, 248, 0.12);
+    border: 1px solid rgba(129, 140, 248, 0.25);
 }
 
 .mini-metric {
-    font-size: 2.15rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    letter-spacing: -0.04em;
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: #FAFAFA;
+    letter-spacing: -0.03em;
     line-height: 1.1;
-    margin: 0.3rem 0;
+    margin: 0.25rem 0;
+    font-feature-settings: "tnum" 1;
 }
 
 .mini-metric small {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     color: var(--text-muted);
     font-weight: 500;
     margin-left: 0.25rem;
@@ -288,33 +269,32 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
 }
 
 .mini-foot {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    border-top: 1px solid #F1F5F9;
-    padding-top: 0.55rem;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 0.5rem;
     margin-top: 0.25rem;
 }
 
 .mini-foot b {
-    color: var(--text-primary);
+    color: #FAFAFA;
     font-weight: 600;
 }
 
 .mini-foot code {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     background: var(--surface-card-subtle);
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
+    padding: 0.12rem 0.35rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-card);
     color: var(--text-secondary);
 }
 
-/* =============================================================================
-   TELEMETRY & SECTION HEADERS
-   ============================================================================= */
+/* TELEMETRY & SECTION HEADERS */
 .telemetry-top {
     display: flex;
     justify-content: space-between;
@@ -326,20 +306,20 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
 
 .card-kicker {
     font-family: var(--font-ui);
-    font-size: 0.70rem;
-    letter-spacing: 0.08em;
-    color: var(--accent-terracotta);
-    font-weight: 700;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 600;
     display: block;
-    margin: 0 0 0.25rem 0;
+    margin: 0 0 0.2rem 0;
     line-height: 1.3;
     text-transform: uppercase;
 }
 
 .telemetry-title {
-    font-size: 1.22rem;
+    font-size: 1.18rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #FAFAFA;
     margin: 0;
     line-height: 1.3;
     letter-spacing: -0.02em;
@@ -352,9 +332,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     font-family: var(--font-ui);
     font-size: 0.68rem;
     font-weight: 700;
-    color: #059669;
-    background: #ECFDF5;
-    border: 1px solid #A7F3D0;
+    color: var(--state-success-text);
+    background: var(--state-success-bg);
+    border: 1px solid var(--state-success-border);
     padding: 0.22rem 0.55rem;
     border-radius: var(--radius-badge);
 }
@@ -363,7 +343,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     width: 6px;
     height: 6px;
     border-radius: var(--radius-full);
-    background: #059669;
+    background: var(--state-success);
 }
 
 .ecg-footnote {
@@ -376,14 +356,12 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     margin-top: 0.4rem;
 }
 
-/* =============================================================================
-   CONSOLE ACTIONS & DIAGNOSTIC BOX
-   ============================================================================= */
+/* CONSOLE ACTIONS & DIAGNOSTIC BOX */
 .console-action-desc {
     font-size: 0.82rem;
     color: var(--text-secondary);
     background: var(--surface-card-subtle);
-    border-left: 3px solid var(--accent-terracotta);
+    border-left: 3px solid #6366F1;
     padding: 0.6rem 0.85rem;
     border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
     margin: 0.3rem 0 0.6rem 0;
@@ -434,13 +412,14 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
 .diag-run code {
     font-family: var(--font-mono);
     color: var(--text-primary);
-    background: var(--border-divider);
+    background: var(--border-subtle);
+    border: 1px solid var(--border-card);
     padding: 0.15rem 0.4rem;
     border-radius: 4px;
 }
 
 .diag-summary {
-    font-size: 0.84rem;
+    font-size: 0.86rem;
     color: var(--text-secondary);
     line-height: 1.45;
     margin: 0.4rem 0 0.7rem 0;
@@ -464,18 +443,16 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
 }
 
 .hash-text {
-    color: var(--text-primary);
+    color: #FAFAFA;
     font-weight: 500;
 }
 
-/* =============================================================================
-   COCKPIT OPERATIONAL HEADER (Minimal Editorial Top Bar)
-   ============================================================================= */
+/* COCKPIT OPERATIONAL HEADER */
 .cockpit-header-bar {
     background: var(--surface-card);
     border: 1px solid var(--border-card);
-    border-radius: var(--radius-xl);
-    padding: 1.25rem 1.6rem;
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.4rem;
     margin-bottom: 1.25rem;
     box-shadow: var(--shadow-card);
     display: flex;
@@ -489,24 +466,24 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 1.25rem !important;
+    gap: 1rem !important;
 }
 
 .cockpit-tag {
     font-family: var(--font-ui);
     font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    color: var(--accent-terracotta);
-    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 600;
     text-transform: uppercase;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
 }
 
 .cockpit-title {
     font-family: var(--font-heading) !important;
-    font-size: 1.55rem;
+    font-size: 1.4rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #FAFAFA;
     margin: 0;
     line-height: 1.2;
     letter-spacing: -0.02em;
@@ -519,15 +496,15 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
 
 .cockpit-badges {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.45rem;
     flex-wrap: wrap;
     align-items: center;
 }
 
 .brand-badge-img {
-    width: 50px;
-    height: 50px;
-    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
     border: 1px solid var(--border-card);
     box-shadow: var(--shadow-subtle);
     object-fit: contain;
@@ -535,17 +512,15 @@ div[data-testid="stVerticalBlockBorderWrapper"]>div[data-testid="stVerticalBlock
     flex-shrink: 0;
 }
 
-/* =============================================================================
-   MINIMALIST NAVIGATION TABS (Clean Modern Pill Nav)
-   ============================================================================= */
+/* MINIMALIST NAVIGATION TABS */
 div[data-testid="stTabs"] {
     background: transparent;
     margin-bottom: 1.6rem;
 }
 
 div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    background: var(--surface-card-subtle);
-    border: 1px solid var(--border-divider);
+    background: var(--surface-card);
+    border: 1px solid var(--border-card);
     border-radius: var(--radius-md);
     padding: 0.3rem;
     gap: 0.3rem;
@@ -568,24 +543,24 @@ div[data-testid="stTabs"] button[role="tab"] {
     font-size: 0.84rem !important;
     font-weight: 600 !important;
     padding: 0.55rem 1.15rem !important;
-    transition: all 0.18s ease !important;
+    transition: all 0.15s ease !important;
     height: auto !important;
 }
 
 div[data-testid="stTabs"] button[role="tab"]:hover {
-    color: var(--text-primary) !important;
-    background: var(--surface-overlay) !important;
+    color: #FAFAFA !important;
+    background: rgba(255, 255, 255, 0.04) !important;
 }
 
 div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-    color: var(--text-primary) !important;
-    background: var(--surface-card) !important;
-    border: 1px solid var(--border-card) !important;
+    color: #FAFAFA !important;
+    background: #1C1C22 !important;
+    border: 1px solid #3F3F46 !important;
     box-shadow: var(--shadow-subtle) !important;
 }
 
 div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p {
-    color: var(--text-primary) !important;
+    color: #FAFAFA !important;
     font-weight: 700 !important;
 }
 
@@ -593,22 +568,23 @@ div[data-testid="stTabs"] [role="tabpanel"] {
     padding-top: 0.6rem !important;
 }
 
-/* =============================================================================
-   STREAMLIT FORM CONTROLS & BUTTONS
-   ============================================================================= */
+/* STREAMLIT FORM CONTROLS & SELECT */
 div[data-baseweb="select"]>div {
     background: var(--surface-card) !important;
-    border: 1px solid var(--border-card-hover) !important;
-    color: var(--text-primary) !important;
+    border: 1px solid var(--border-card) !important;
+    color: #FAFAFA !important;
     border-radius: var(--radius-sm) !important;
     font-size: 0.88rem !important;
     font-family: var(--font-ui) !important;
-    box-shadow: var(--shadow-subtle) !important;
 }
 
 div[data-baseweb="select"]>div:hover,
 div[data-baseweb="select"]>div:focus-within {
-    border-color: var(--accent-terracotta) !important;
+    border-color: #52525B !important;
+}
+
+div[data-baseweb="select"] span {
+    color: #FAFAFA !important;
 }
 
 div[data-baseweb="popover"],
@@ -626,41 +602,52 @@ li[role="option"] {
 
 li[role="option"]:hover,
 li[aria-selected="true"] {
-    background-color: var(--surface-card-subtle) !important;
-    color: var(--text-primary) !important;
+    background-color: #1C1C22 !important;
+    color: #FAFAFA !important;
 }
 
+div[data-testid="stRadio"] label {
+    color: var(--text-secondary) !important;
+}
+
+div[data-testid="stRadio"] label:hover {
+    color: #FAFAFA !important;
+}
+
+/* BUTTONS */
 div.stButton>button {
     font-family: var(--font-ui) !important;
     font-size: 0.84rem !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     border-radius: var(--radius-sm) !important;
     padding: 0.65rem 1.35rem !important;
-    transition: all 0.18s ease !important;
+    transition: all 0.15s ease !important;
     border: 1px solid var(--border-card) !important;
-    background: var(--surface-card) !important;
-    color: var(--text-primary) !important;
+    background: var(--surface-card-subtle) !important;
+    color: #FAFAFA !important;
     box-shadow: var(--shadow-subtle) !important;
 }
 
 div.stButton>button:hover {
-    background: var(--surface-card-subtle) !important;
+    background: #27272A !important;
     border-color: var(--border-card-hover) !important;
     transform: translateY(-1px);
 }
 
 div.stButton>button[kind="primary"] {
-    background: var(--accent-terracotta) !important;
-    border-color: var(--accent-terracotta) !important;
-    color: #0F172A !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+    background: #FAFAFA !important;
+    border-color: #FAFAFA !important;
+    color: #09090B !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 div.stButton>button[kind="primary"]:hover {
-    background: var(--accent-terracotta-hover) !important;
-    border-color: var(--accent-terracotta-hover) !important;
+    background: #E4E4E7 !important;
+    border-color: #E4E4E7 !important;
+    color: #09090B !important;
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22) !important;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.12) !important;
 }
 
 div.stButton>button[kind="primary"]:active {
@@ -679,17 +666,15 @@ div[data-testid="stExpander"] {
 div[data-testid="stExpander"] details summary {
     font-family: var(--font-ui) !important;
     font-weight: 600 !important;
-    color: var(--text-primary) !important;
+    color: #FAFAFA !important;
     padding: 0.95rem 1.25rem !important;
 }
 
-/* Ambient Divider */
 .ambient-divider {
     border-top: 1px solid var(--border-divider);
     margin: 1.8rem 0;
 }
 
-/* Spacers */
 .spacing-gap-sm {
     height: 0.65rem;
 }
@@ -702,24 +687,21 @@ div[data-testid="stExpander"] details summary {
     height: 1.8rem;
 }
 
-/* =============================================================================
-   INCIDENT & AGENT CARDS
-   ============================================================================= */
+/* INCIDENT & AGENT CARDS */
 .agent-card {
-    background: #FFFFFF !important;
+    background: var(--surface-card) !important;
     border: 1px solid var(--border-card);
     border-radius: var(--radius-md);
     padding: 1.15rem 1.35rem;
     height: 100%;
     box-sizing: border-box;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .agent-card:hover {
     border-color: var(--border-card-hover);
-    background: #FFFFFF !important;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
+    background: var(--surface-card-hover) !important;
 }
 
 .agent-card-header {
@@ -735,7 +717,7 @@ div[data-testid="stExpander"] details summary {
     font-family: var(--font-ui);
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #FAFAFA;
     letter-spacing: 0.02em;
 }
 
@@ -746,12 +728,15 @@ div[data-testid="stExpander"] details summary {
     line-height: 1.5;
 }
 
+.agent-card b {
+    color: #E4E4E7;
+}
+
 .agent-card ul {
     margin: 0.35rem 0 0.5rem 1.1rem;
     padding: 0;
 }
 
-/* Status pills for Contract Tables */
 .pill-pass {
     display: inline-block;
     font-family: var(--font-ui);
@@ -776,10 +761,9 @@ div[data-testid="stExpander"] details summary {
     border-radius: var(--radius-badge);
 }
 
-/* DLQ Explorer styling */
 .dlq-meta-card {
-    background: var(--state-danger-bg);
-    border: 1px solid var(--state-danger-border);
+    background: var(--state-danger-bg) !important;
+    border: 1px solid var(--state-danger-border) !important;
     border-radius: var(--radius-md);
     padding: 1rem 1.3rem;
     margin-bottom: 1rem;
@@ -793,7 +777,6 @@ div[data-testid="stExpander"] details summary {
     margin-bottom: 0.45rem;
 }
 
-/* Empty State */
 .empty-circuit-illustration {
     display: inline-flex;
     align-items: center;
@@ -806,11 +789,8 @@ div[data-testid="stExpander"] details summary {
     margin-bottom: 0.8rem;
 }
 
-/* =============================================================================
-   MOBILE RESPONSIVENESS & ADAPTIVE BREAKPOINTS
-   ============================================================================= */
+/* RESPONSIVE RULES */
 @media (max-width: 768px) {
-    /* 1. Page Canvas & Container */
     .main .block-container {
         padding-top: 0.65rem !important;
         padding-bottom: 2rem !important;
@@ -819,7 +799,6 @@ div[data-testid="stExpander"] details summary {
         max-width: 100% !important;
     }
 
-    /* 2. Streamlit Columns Auto-Stacking */
     div[data-testid="column"] {
         min-width: 100% !important;
         width: 100% !important;
@@ -834,7 +813,6 @@ div[data-testid="stExpander"] details summary {
         gap: 0.75rem !important;
     }
 
-    /* 3. Card Containers Auto-Height */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         min-height: auto !important;
         padding: 1rem 1.1rem !important;
@@ -844,13 +822,11 @@ div[data-testid="stExpander"] details summary {
         padding: 1rem 1.1rem !important;
     }
 
-    /* 4. Cockpit Header Adaptability */
     .cockpit-header-bar {
         padding: 1rem 1.15rem !important;
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 0.85rem !important;
-        border-radius: var(--radius-lg) !important;
     }
 
     .cockpit-brand {
@@ -858,15 +834,8 @@ div[data-testid="stExpander"] details summary {
         width: 100% !important;
     }
 
-    .brand-badge-img {
-        width: 42px !important;
-        height: 42px !important;
-        border-radius: 10px !important;
-    }
-
     .cockpit-title {
         font-size: clamp(1.2rem, 5.5vw, 1.45rem) !important;
-        line-height: 1.25 !important;
     }
 
     .cockpit-badges {
@@ -876,38 +845,13 @@ div[data-testid="stExpander"] details summary {
         gap: 0.35rem !important;
     }
 
-    .cockpit-badges .chip {
-        font-size: 0.68rem !important;
-        padding: 0.22rem 0.5rem !important;
-    }
-
-    /* 5. Fluid Tabs with Native Inertial Touch Scroll */
-    div[data-testid="stTabs"] {
-        margin-bottom: 1.1rem !important;
-    }
-
     div[data-testid="stTabs"] [data-baseweb="tab-list"] {
         overflow-x: auto !important;
         flex-wrap: nowrap !important;
         -webkit-overflow-scrolling: touch !important;
         scrollbar-width: none !important;
-        padding: 0.25rem !important;
-        border-radius: var(--radius-sm) !important;
-        width: 100% !important;
     }
 
-    div[data-testid="stTabs"] [data-baseweb="tab-list"]::-webkit-scrollbar {
-        display: none !important;
-    }
-
-    div[data-testid="stTabs"] button[role="tab"] {
-        white-space: nowrap !important;
-        padding: 0.45rem 0.8rem !important;
-        font-size: 0.78rem !important;
-        flex-shrink: 0 !important;
-    }
-
-    /* 6. Mini Metrics Cards */
     .mini-card {
         padding: 1rem 1.1rem !important;
         min-height: auto !important;
@@ -917,62 +861,6 @@ div[data-testid="stExpander"] details summary {
         font-size: 1.8rem !important;
     }
 
-    /* 7. Hero Card */
-    .hero-card {
-        padding: 1.1rem 1.2rem !important;
-        overflow: hidden !important;
-    }
-
-    .hero-headline {
-        font-size: 1.35rem !important;
-    }
-
-    .hero-glow-sphere {
-        transform: scale(0.65) !important;
-        right: -40px !important;
-        top: -40px !important;
-    }
-
-    .hero-badges {
-        flex-wrap: wrap !important;
-        gap: 0.35rem !important;
-    }
-
-    /* 8. Telemetry & Console */
-    .telemetry-top {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 0.4rem !important;
-    }
-
-    .telemetry-title {
-        font-size: 1.1rem !important;
-    }
-
-    .diag-hash-bar {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 0.3rem !important;
-        word-break: break-all !important;
-    }
-
-    .diag-header {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 0.35rem !important;
-    }
-
-    /* 9. DataFrames & Tables Overflow */
-    div[data-testid="stDataFrame"],
-    div[data-testid="stTable"],
-    .stVegaLiteChart,
-    .stPlotlyChart {
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-
-    /* 10. Buttons & Actions */
     div.stButton>button {
         width: 100% !important;
         justify-content: center !important;

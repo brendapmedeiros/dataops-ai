@@ -33,7 +33,7 @@ def render_data_viewer_tab(database_url: str) -> None:
             <div class="bento-card mini-card">
                 <div class="mini-top">
                     <span class="mini-label">Registros Homologados</span>
-                    <span class="mini-tag tag-blue">{icon_database(12, "#475569")} GOLD</span>
+                    <span>{icon_database(14, "#71717A")}</span>
                 </div>
                 <div class="mini-metric">{total_rows} <small>linhas</small></div>
                 <div class="mini-foot">Tabela: <code>bcb_timeseries</code></div>
@@ -47,7 +47,8 @@ def render_data_viewer_tab(database_url: str) -> None:
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Dados Homologados</span>
+                    <span class="mini-label">Período Homologado</span>
+                    <span>{icon_activity(14, "#71717A")}</span>
                 </div>
                 <div class="mini-metric" style="font-size: 1.15rem; line-height: 2.2;">{min_date} → {max_date}</div>
                 <div class="mini-foot">Série: <b>BCB SGS 11 (Selic)</b></div>
@@ -62,7 +63,6 @@ def render_data_viewer_tab(database_url: str) -> None:
             <div class="bento-card mini-card">
                 <div class="mini-top">
                     <span class="mini-label">Valor Médio da Taxa</span>
-                    <span class="mini-tag tag-blue">MÉDIA</span>
                 </div>
                 <div class="mini-metric">{mean_val:.4f}<small>% a.d.</small></div>
                 <div class="mini-foot">Média da amostra homologada</div>
@@ -77,7 +77,6 @@ def render_data_viewer_tab(database_url: str) -> None:
             <div class="bento-card mini-card">
                 <div class="mini-top">
                     <span class="mini-label">Intervalo da Série</span>
-                    <span class="mini-tag tag-cyan">EXTREMOS</span>
                 </div>
                 <div class="mini-metric" style="font-size: 1.25rem; line-height: 2.1;">{min_val:.4f} ~ {max_val:.4f}</div>
                 <div class="mini-foot">Mínimo e máximo observados</div>
@@ -108,18 +107,18 @@ def render_data_viewer_tab(database_url: str) -> None:
 
         line = (
             alt.Chart(chart_df)
-            .mark_line(color="#D59B88", strokeWidth=2.5, interpolate="monotone")
+            .mark_line(color="#818CF8", strokeWidth=2.2, interpolate="monotone")
             .encode(
                 x=alt.X(
                     "data_formatada:O",
                     title="Data de Fechamento",
-                    axis=alt.Axis(labelColor="#64748B", labelAngle=-45, titleColor="#0F172A"),
+                    axis=alt.Axis(labelColor="#A1A1AA", labelAngle=-45, titleColor="#FAFAFA"),
                 ),
                 y=alt.Y(
                     "value:Q",
                     title="Taxa Selic Diária (%)",
                     scale=alt.Scale(zero=False),
-                    axis=alt.Axis(labelColor="#64748B", titleColor="#0F172A", gridColor="#F1F5F9"),
+                    axis=alt.Axis(labelColor="#A1A1AA", titleColor="#FAFAFA", gridColor="#27272A"),
                 ),
                 tooltip=[
                     alt.Tooltip("data_formatada:N", title="Data"),
@@ -131,7 +130,7 @@ def render_data_viewer_tab(database_url: str) -> None:
 
         points = (
             alt.Chart(chart_df)
-            .mark_circle(color="#FFFFFF", size=48, stroke="#D59B88", strokeWidth=2)
+            .mark_circle(color="#09090B", size=42, stroke="#818CF8", strokeWidth=2)
             .encode(
                 x=alt.X("data_formatada:O"),
                 y=alt.Y("value:Q"),

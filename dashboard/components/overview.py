@@ -30,17 +30,15 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
 
     # kpis operacionais do topo
     c1, c2, c3, c4 = st.columns(4, gap="medium")
-
-
     with c1:
-        health_color = "#059669" if pass_rate >= 80 else "#E11D48"
-        health_label = "CONFORME" if pass_rate >= 80 else "ATENÇÃO"
+        health_color = "#4ADE80" if pass_rate >= 80 else "#FB7185"
+        health_label = "Conforme" if pass_rate >= 80 else "Atenção"
         st.markdown(
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Health Check</span>
-                    <span class="mini-tag tag-blue">{icon_shield_check(13, health_color)} CONTRATOS</span>
+                    <span class="mini-label">Taxa de Conformidade</span>
+                    <span>{icon_shield_check(14, health_color)}</span>
                 </div>
                 <div class="mini-metric">{pass_rate:.0f}<small>%</small></div>
                 <div class="mini-foot">Status: <b style="color: {health_color};">{health_label}</b> ({clean_runs}/{total_runs})</div>
@@ -50,17 +48,16 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
         )
 
     with c2:
-        dlq_color = "#E11D48" if quarantined_count > 0 else "#059669"
-        dlq_tag_cls = "tag-cyan" if quarantined_count > 0 else "tag-blue"
+        dlq_color = "#FB7185" if quarantined_count > 0 else "#4ADE80"
         st.markdown(
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Quarentena</span>
-                    <span class="mini-tag {dlq_tag_cls}">{icon_box(13, dlq_color)} PROTEÇÃO</span>
+                    <span class="mini-label">Lotes em Quarentena</span>
+                    <span>{icon_box(14, dlq_color)}</span>
                 </div>
                 <div class="mini-metric">{quarantined_count} <small>lotes</small></div>
-                <div class="mini-foot">Isolados da base: <b style="color: {dlq_color};">{quarantined_count} retidos</b></div>
+                <div class="mini-foot">Isolados da base: <b style="color: {dlq_color};">{quarantined_count} retidos na DLQ</b></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -71,11 +68,11 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Base de produção</span>
-                    <span class="mini-tag tag-blue">{icon_database(13, "#475569")} DATABASE</span>
+                    <span class="mini-label">Base de Produção</span>
+                    <span>{icon_database(14, "#71717A")}</span>
                 </div>
                 <div class="mini-metric">{db_row_count} <small>linhas</small></div>
-                <div class="mini-foot">Série: <b>BCB 11</b> • SLA: <b style="color: #059669;">Em conformidade</b></div>
+                <div class="mini-foot">Série: <b>BCB 11</b> • SLA: <b style="color: #4ADE80;">Em conformidade</b></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -86,8 +83,8 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Autonomia dos Agentes</span>
-                    <span class="mini-tag tag-cyan">{icon_cpu(13, "#D59B88")} AI RES</span>
+                    <span class="mini-label">Autonomia Operacional</span>
+                    <span>{icon_cpu(14, "#71717A")}</span>
                 </div>
                 <div class="mini-metric">{automated_rate:.0f}<small>%</small></div>
                 <div class="mini-foot">MTTR: <b>&lt; 2s</b> • Revisão manual: <b>{manual_reviews} casos</b></div>
@@ -95,7 +92,6 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
             """,
             unsafe_allow_html=True,
         )
-
 
     st.markdown('<div class="spacing-gap-md"></div>', unsafe_allow_html=True)
 
@@ -114,12 +110,11 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
         render_collaboration_panel(
             latest_collab,
             run_id=latest_run_id,
-            title="Governança Ativa: Debate e Consenso Multiagente (Última Execução)",
+            title="Governança Ativa: Análise de Causa Raiz & Resolução (Última Execução)",
         )
 
     # timeline de execucoes e distribuicao das falhas
     col_timeline, col_pareto = st.columns([0.58, 0.42], gap="medium")
-
 
     with col_timeline:
         with st.container(border=True):
@@ -155,20 +150,20 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
                         x=alt.X(
                             "run_label:O",
                             title="Execuções (mais antigas → mais recentes)",
-                            axis=alt.Axis(labelColor="#64748B", labelAngle=-45, titleColor="#0F172A", labelFontSize=11),
+                            axis=alt.Axis(labelColor="#A1A1AA", labelAngle=-45, titleColor="#FAFAFA", labelFontSize=11),
                         ),
                         y=alt.Y(
                             "linhas:Q",
                             title="Linhas Avaliadas",
-                            axis=alt.Axis(labelColor="#64748B", titleColor="#0F172A", gridColor="#F1F5F9"),
+                            axis=alt.Axis(labelColor="#A1A1AA", titleColor="#FAFAFA", gridColor="#27272A"),
                         ),
                         color=alt.Color(
                             "status_cor:N",
                             scale=alt.Scale(
                                 domain=["Carga Aprovada", "Isolado na DLQ"],
-                                range=["#059669", "#E11D48"],
+                                range=["#10B981", "#F43F5E"],
                             ),
-                            legend=alt.Legend(title="Status do Lote", orient="top", labelColor="#334155", titleColor="#0F172A"),
+                            legend=alt.Legend(title="Status do Lote", orient="top", labelColor="#A1A1AA", titleColor="#FAFAFA"),
                         ),
                         tooltip=[
                             alt.Tooltip("run_id:N", title="Run ID"),
@@ -211,16 +206,16 @@ def render_overview_tab(status: dict | None, history_df: pd.DataFrame, db_row_co
                             "regra:N",
                             sort="-x",
                             title=None,
-                            axis=alt.Axis(labelColor="#334155", labelFontSize=11),
+                            axis=alt.Axis(labelColor="#E4E4E7", labelFontSize=11),
                         ),
                         x=alt.X(
                             "ocorrencias:Q",
                             title="Frequência de Violação",
-                            axis=alt.Axis(labelColor="#64748B", titleColor="#0F172A", tickMinStep=1, gridColor="#F1F5F9"),
+                            axis=alt.Axis(labelColor="#A1A1AA", titleColor="#FAFAFA", tickMinStep=1, gridColor="#27272A"),
                         ),
                         color=alt.Color(
                             "ocorrencias:Q",
-                            scale=alt.Scale(range=["#F3DDD7", "#D59B88"]),
+                            scale=alt.Scale(range=["#3F3F46", "#818CF8"]),
                             legend=None,
                         ),
                         tooltip=[alt.Tooltip("regra:N", title="Regra"), alt.Tooltip("ocorrencias:Q", title="Incidentes")],

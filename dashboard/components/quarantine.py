@@ -49,11 +49,11 @@ def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Lotes isolados</span>
-                    <span class="mini-tag tag-cyan">{icon_box(12, "#D59B88")} Quarentena</span>
+                    <span class="mini-label">Lotes Isolados</span>
+                    <span>{icon_box(14, "#FB7185")}</span>
                 </div>
-                <div class="mini-metric">{total_quarantined_batches} <small>lotes isolados</small></div>
-                <div class="mini-foot">Diretório: <code>data/dlq/</code></div>
+                <div class="mini-metric">{total_quarantined_batches} <small>lotes retidos</small></div>
+                <div class="mini-foot">Diretório de auditoria: <code>data/dlq/</code></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -64,8 +64,8 @@ def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
             f"""
             <div class="bento-card mini-card">
                 <div class="mini-top">
-                    <span class="mini-label">Último incidente</span>
-                    <span class="mini-tag tag-blue">{icon_activity(12, "#475569")} PROTECTION EVENT</span>
+                    <span class="mini-label">Último Incidente Retido</span>
+                    <span>{icon_activity(14, "#71717A")}</span>
                 </div>
                 <div class="mini-metric" style="font-size: 1.5rem; line-height: 1.8;">{latest_time_str}</div>
                 <div class="mini-foot">Arquivo: <code>{latest_file.name[:28]}...</code></div>
@@ -98,7 +98,7 @@ def render_quarantine_tab(dlq_dir: Path, database_url: str = "") -> None:
             )
             scenario = meta_data.get("scenario", "não informado")
             quarantined_at = meta_data.get("quarantined_at", "")
-            alert_svg = icon_shield_alert(15, "#E11D48")
+            alert_svg = icon_shield_alert(15, "#FB7185")
 
             st.markdown(
                 f"""
