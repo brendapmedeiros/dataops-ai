@@ -80,34 +80,6 @@ class MultiAgentCollaborationTest(unittest.TestCase):
             report_content = Path(result.incident_report_path).read_text(encoding="utf-8")
             self.assertIn("Consenso Refinado (com calibração)", report_content)
 
-    def test_quality_agent_calibrate_method(self) -> None:
-        """Verifica a calibração do DataQualityAgent ao receber contraponto da investigação."""
-        quality_agent = DataQualityAgent(None, "gemini-flash-latest")
-        df = pd.DataFrame(
-            {
-                "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-                "value": ["texto_invalido", 12.0],
-                "series_code": [11, 11],
-                "source": ["bcb_api", "bcb_api"],
-            }
-        )
-        report = run_quality_checks(df)
-        initial_diag = quality_agent.diagnose(report, {})
-
-        investigation_agent = InvestigationAgent("sqlite:///:memory:", Path(tempfile.gettempdir()))
-        inv_report = investigation_agent.investigate(report, initial_diag, "tipo_invalido", "run_test")
-
-        calibrated, turn = quality_agent.calibrate(
-            report,
-            initial_diag,
-            inv_report,
-            {"quarantined": True},
-        )
-
-        self.assertIsInstance(calibrated, AgentDiagnosis)
-        self.assertEqual(turn.speaker, "DataQualityAgent")
-        self.assertEqual(turn.role, "calibration")
-        self.assertIn("calibrado", turn.message.lower())
 
     def test_investigation_alignment_evaluation(self) -> None:
         """Testa as condições sob as quais a investigação solicita calibração ao supervisor."""

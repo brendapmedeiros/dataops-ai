@@ -90,6 +90,14 @@ def render_cockpit_header(status: dict | None, history_df: pd.DataFrame) -> None
         else icon_shield_check(24, "#FAFAFA")
     )
 
+    import os
+    ambiente = status.get("ambiente", {}) if status else {}
+    provedor = ambiente.get("provedor") or ("Google Cloud Run" if os.getenv("K_SERVICE") else "Localhost")
+    regiao = ambiente.get("regiao") or os.getenv("GCP_REGION", "us-central1" if "Cloud" in provedor else "local")
+    is_cloud = "Cloud" in provedor
+    env_cls = "chip-emerald" if is_cloud else "chip-blue"
+    env_text = f"Ambiente: Cloud Run ({regiao})" if is_cloud else "Ambiente: Localhost"
+
     st.markdown(
         f"""
         <div class="cockpit-header-bar">
@@ -102,6 +110,7 @@ def render_cockpit_header(status: dict | None, history_df: pd.DataFrame) -> None
             </div>
             <div class="cockpit-badges">
                 <span class="chip {system_status_cls}">{status_icon} {system_status_label}</span>
+                <span class="chip {env_cls}">{icon_cpu(13, "currentColor")} {env_text}</span>
                 <span class="chip {api_cls}">{api_icon} {api_text}</span>
                 <span class="chip chip-blue">{db_icon} {db_text}</span>
                 <span class="chip chip-blue">{ai_icon} {ai_text}</span>

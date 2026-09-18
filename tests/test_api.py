@@ -73,8 +73,8 @@ class ApiTest(unittest.TestCase):
             self.assertEqual(response.status_code, 400)
             self.assertIn("Cenário inválido", response.json()["detail"])
 
-    def test_run_pipeline_requires_api_key_when_configured(self) -> None:
-        # bloqueia requisicao sem api key quando configurada
+    def test_run_pipeline_api_key_enforcement(self) -> None:
+        # valida bloqueio com chave ausente ou invalida e liberacao com chave correta
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
             settings = _test_settings(Path(temp_dir), api_key="minha-chave-secreta")
             client = TestClient(create_app(settings))
@@ -89,18 +89,24 @@ class ApiTest(unittest.TestCase):
             )
             self.assertEqual(res_wrong_key.status_code, 401)
 
-    def test_run_pipeline_accepts_valid_api_key(self) -> None:
-        # permite execucao com a api key correta
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
-            settings = _test_settings(Path(temp_dir), api_key="minha-chave-secreta")
-            client = TestClient(create_app(settings))
-
-            res = client.post(
+            res_ok = client.post(
                 "/execucoes",
                 json={"scenario": "timeout_api"},
                 headers={"X-API-Key": "minha-chave-secreta"},
             )
-            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res_ok.status_code, 200)
+
+    def test_get_gold_and_quarantine_data(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            client = TestClient(create_app(_test_settings(Path(temp_dir))))
+
+            gold_res = client.get("/dados/gold")
+            self.assertEqual(gold_res.status_code, 200)
+            self.assertIn("registros", gold_res.json())
+
+            dlq_res = client.get("/dados/quarentena")
+            self.assertEqual(dlq_res.status_code, 200)
+            self.assertIn("lotes", dlq_res.json())
 
 
 def _test_settings(root: Path, api_key: str | None = None) -> Settings:

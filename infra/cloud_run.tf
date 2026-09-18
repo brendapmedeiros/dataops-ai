@@ -5,11 +5,17 @@ resource "google_cloud_run_v2_service" "api" {
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
+  depends_on = [
+    google_project_service.required_services,
+    google_secret_manager_secret_version.gemini_api_key_bootstrap,
+    google_secret_manager_secret_version.database_url_bootstrap,
+  ]
+
   template {
     service_account = google_service_account.app_sa.email
 
     scaling {
-      # zero instâncias ociosas para garantir custo zero quando nao houver uso
+      # zero instancias ociosas para garantir custo zero quando nao houver uso
       min_instance_count = 0
       max_instance_count = 2
     }
@@ -76,6 +82,10 @@ resource "google_cloud_run_v2_service" "dashboard" {
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
+  depends_on = [
+    google_project_service.required_services,
+  ]
+
   template {
     service_account = google_service_account.app_sa.email
 
@@ -98,6 +108,10 @@ resource "google_cloud_run_v2_service" "dashboard" {
         }
       }
 
+      # sobreponho o entrypoint padrao do container para rodar streamlit em vez de uvicorn
+      command = ["streamlit"]
+      args    = ["run", "dashboard/app.py", "--server.port", "8501", "--server.address", "0.0.0.0", "--server.headless", "true"]
+
       env {
         name  = "DATAOPS_API_URL"
         value = google_cloud_run_v2_service.api.uri
@@ -106,7 +120,40 @@ resource "google_cloud_run_v2_service" "dashboard" {
   }
 }
 
-# libero acesso publico para demonstracao no portfólio
+resource "google_cloud_run_v2_service" "frontend" {
+  count    = var.enable_frontend_react ? 1 : 0
+  name     = "dataops-frontend"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  depends_on = [
+    google_project_service.required_services,
+  ]
+
+  template {
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 2
+    }
+
+    containers {
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/dataops-ai/frontend:latest"
+
+      ports {
+        container_port = 80
+      }
+
+      resources {
+        limits = {
+          cpu    = "1000m"
+          memory = "256Mi"
+        }
+      }
+    }
+  }
+}
+
+# libero acesso publico para demonstracao no portfolio
 resource "google_cloud_run_v2_service_iam_member" "api_public" {
   name     = google_cloud_run_v2_service.api.name
   location = var.region
@@ -116,6 +163,14 @@ resource "google_cloud_run_v2_service_iam_member" "api_public" {
 
 resource "google_cloud_run_v2_service_iam_member" "dashboard_public" {
   name     = google_cloud_run_v2_service.dashboard.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
+  count    = var.enable_frontend_react ? 1 : 0
+  name     = google_cloud_run_v2_service.frontend[0].name
   location = var.region
   role     = "roles/run.invoker"
   member   = "allUsers"

@@ -1,5 +1,11 @@
 # DataOps AI
 
+[![CI-CD DataOps AI](https://github.com/brendapmedeiros/dataops-ai/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/brendapmedeiros/dataops-ai/actions/workflows/ci_cd.yml)
+![GCP Cloud Run](https://img.shields.io/badge/Deploy-Google%20Cloud%20Run-2563EB?logo=googlecloud&logoColor=white)
+![GCS Data Lake](https://img.shields.io/badge/Storage-Google%20Cloud%20Storage-34A853?logo=googlecloud&logoColor=white)
+![Terraform](https://img.shields.io/badge/IaC-Terraform%201.7-623CE4?logo=terraform&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)
+
 DataOps AI é uma plataforma local e em nuvem para monitoramento de pipelines de dados com agentes de IA. O projeto executa uma pipeline de séries temporais usando a API SGS do Banco Central, valida a qualidade dos dados com contratos, investiga incidentes autonomamente e gera planos de resolução com histórico e trilha de auditoria imutável (SHA-256) por execução.
 
 ## Arquitetura
@@ -188,22 +194,22 @@ python main.py status
 
 O dashboard foi reformulado para ser uma ferramenta operacional indispensável de observabilidade de dados (Data Observability & Incident Response), estruturado em abas especializadas:
 
-1. **Barra Operacional do Topo (Header):** Status em tempo real do pipeline (`100% Saudável` ou `Circuit Breaker`), indicador de **Freshness/SLA** do último lote, conectividade da API SGS 11, status do banco de dados e motor de IA ativo.
-2. **Aba 1: 📊 Visão Geral & SLAs:**
+1. **Barra Operacional do Topo (Header):** Status em tempo real do pipeline (`Operacional` ou `Circuit Breaker`), indicador de **Freshness/SLA** do último lote, conectividade da API SGS 11, status do banco de dados, ambiente de execução e motor de IA ativo.
+2. **Aba 1: Visão Geral & SLAs:**
    - **4 KPIs Operacionais:** *Pipeline Health Rate (%)*, *Circuit Breaker / DLQ (lotes retidos)*, *Volume na Base Homologada (linhas)* e *Taxa de Autonomia dos Agentes*.
    - **Linha do Tempo das Execuções:** Gráfico interativo com status de aprovação vs retenção e volume por execução.
    - **Pareto de Violações:** Gráfico de barras identificando as regras de contrato que mais falham historicamente (*Nulos*, *Schema Drift*, *Tipo Inválido*, *Duplicatas*, etc.).
-3. **Aba 2: 🚨 Central de Incidentes & RCA:**
+3. **Aba 2: Central de Incidentes & RCA:**
    - **Seletor de Execução:** Raio-X individual de qualquer run com carimbo criptográfico SHA-256.
    - **Tabela de Contratos de Dados:** Status detalhado (`PASS`/`FAIL`), coluna e quantidade de linhas afetadas por cada regra do contrato YAML.
    - **Painel de Investigação Multiagente (RCA):** Diagnóstico e causas prováveis (`DataQualityAgent`), evidências técnicas e hipótese (`InvestigationAgent`), e plano de correção com análise de impacto (`ResolutionAgent`).
-4. **Aba 3: 📦 Quarentena & Dead Letter Queue (DLQ):**
+4. **Aba 3: Quarentena & Dead Letter Queue (DLQ):**
    - Gestão ativa dos lotes bloqueados pelo Circuit Breaker em `data/dlq/`.
    - Visualização dos metadados e preview tabular completo dos registros defeituosos retidos.
-5. **Aba 4: 🗄️ Dados Homologados (Camada Gold):**
+5. **Aba 4: Dados Homologados (Camada Gold):**
    - Curva temporal da Taxa Selic diária (SGS 11) diretamente do banco analítico (`sqlite`/`postgres`).
    - Estatísticas descritivas (média, mínimo, máximo, intervalo de datas) e tabela analítica para conferência de negócio.
-6. **Aba 5: ⚡ Simulador de Falhas & Injeção de Anomalias:**
+6. **Aba 5: Simulador de Falhas & Injeção de Anomalias:**
    - Disparo controlado de cenários com matriz de risco e feedback imediato dos agentes.
 7. **Trilha de Auditoria Criptográfica (Drawer):** Histórico detalhado e inviolável de execuções.
 
@@ -289,15 +295,16 @@ A documentação interativa Swagger fica disponível em: `http://127.0.0.1:8000/
 
 ## Infraestrutura Cloud-Native e Deploy (GCP)
 
-A infraestrutura foi desenhada como código (IaC) com Terraform no diretório `infra/`, seguindo preceitos serverless e boas práticas de FinOps para garantir custo zero absoluto quando ociosa:
+A infraestrutura foi modelada como código (IaC) com Terraform no diretório `infra/`, seguindo arquitetura serverless e práticas de FinOps para operar com custo zero quando ociosa:
 
-1. **Google Cloud Run (Serverless):** Microsserviços da API e do Dashboard configurados com `min_instance_count = 0` para desligar totalmente os contêineres quando não houver tráfego.
-2. **Google Cloud Storage (Data Lake):** Buckets separados para camadas `raw`, `curated` e `quarantine` (DLQ), com políticas de ciclo de vida configuradas para mover arquivos isolados para arquivamento frio (Nearline) após 30 dias.
-3. **Secret Manager:** Armazenamento centralizado e seguro de chaves de API e credenciais de banco.
-4. **IAM Least Privilege:** Service Account dedicada (`dataops-ai-runner`) com acesso restrito apenas aos buckets e segredos do projeto.
-5. **CI/CD Automatizado:** Pipeline no GitHub Actions (`.github/workflows/ci_cd.yml`) com execução de testes, validação estática de Terraform e autenticação via Workload Identity Federation (sem chaves JSON estáticas).
+1. **Google Cloud Run:** Microsserviços da API (`dataops-api`), Dashboard Streamlit (`dataops-dashboard`) e Cockpit React (`dataops-frontend`) com `min_instance_count = 0` (scale-to-zero quando ociosos) e teto de 2 instâncias.
+2. **Google Cloud Storage (Data Lake):** Buckets segregados para camadas `raw`, `curated` e `quarantine` (DLQ), com regras de ciclo de vida (migração para Nearline aos 30 dias e limpeza de quarentena aos 90 dias).
+3. **Artifact Registry:** Repositório Docker gerenciado via IaC em `us-central1` para versionamento das imagens dos serviços.
+4. **Secret Manager:** Armazenamento de credenciais (`gemini-api-key`, `database-url`) injetadas em tempo de execução.
+5. **IAM com Menor Privilégio:** Service Account dedicada (`dataops-ai-runner`) com papéis restritos exclusivamente aos buckets, segredos e registry do projeto.
+6. **CI/CD com Workload Identity Federation:** Pipeline no GitHub Actions (`.github/workflows/ci_cd.yml`) autentica no GCP via tokens OIDC temporários, eliminando chaves JSON estáticas de Service Account.
 
-### Como inicializar a infraestrutura com Terraform
+### Inicialização da Infraestrutura com Terraform
 
 ```bash
 cd infra
@@ -305,17 +312,23 @@ terraform init
 terraform plan
 ```
 
-Caso deseje provisionar no seu projeto GCP:
+Para provisionar no seu projeto GCP:
 
 ```bash
 terraform apply -var="project_id=SEU_PROJECT_ID"
 ```
 
-### Práticas de FinOps e Custo Zero
+Para obter as URLs públicas dos serviços gerados:
 
-- **Free Tier permanente:** Cloud Run oferece 2 milhões de requisições gratuitas por mês, o GCS oferece 5 GB e o Secret Manager oferece 6 segredos ativos gratuitos.
-- **Instância Cloud SQL desativada por padrão:** A variável `enable_cloud_sql` vem definida como `false` para evitar custos fixos de instâncias gerenciadas, permitindo o uso de PostgreSQL serverless gratuito (ex: Neon/Supabase) ou execução local.
-- **Destruição rápida:** Para encerrar todos os recursos após testes, basta executar:
+```bash
+gcloud run services list --region us-central1
+```
+
+### FinOps e Controle de Custos
+
+- **Free Tier:** Cloud Run oferece 2 milhões de requisições gratuitas/mês, o GCS oferece 5 GB e o Secret Manager oferece 6 segredos ativos.
+- **Cloud SQL opcional:** A variável `enable_cloud_sql` é mantida como `false` por padrão para evitar custos fixos de instâncias ativas, permitindo PostgreSQL serverless gratuito externo (ex: Neon/Supabase) ou execução local.
+- **Destruição dos recursos:**
 
 ```bash
 cd infra

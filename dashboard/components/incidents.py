@@ -9,6 +9,7 @@ import requests
 import streamlit as st
 
 from dashboard.components.collaboration_view import render_collaboration_panel
+from dataops_ai.tools.incident_tools import read_run_diagnosis_from_disk
 from dashboard.components.icons import (
     icon_activity,
     icon_cpu,
@@ -153,12 +154,13 @@ def render_incidents_tab(history_df: pd.DataFrame, curated_dir: Path) -> None:
             <div class="agent-card">
                 <div class="agent-card-header">
                     <span class="agent-name" style="display: flex; align-items: center; gap: 0.4rem;">
-                        {icon_cpu(14, "#52525B")} Diagnóstico de Contratos
+                        {icon_cpu(14, "#D59B88")} Agente de qualidade de dados
                     </span>
+                    <span class="mini-tag tag-cyan">DIAGNÓSTICO</span>
                 </div>
-                <p><b>Avaliação de Integridade:</b></p>
+                <p><b>Resumo do Diagnóstico:</b></p>
                 <p>{_safe(diag_info.get("summary", selected_row.get("resumo", "Sem diagnóstico detalhado.")))}</p>
-                <p><b>Causas Identificadas:</b></p>
+                <p><b>Causas Prováveis:</b></p>
                 <ul>{causes_html}</ul>
             </div>
             """,
@@ -174,8 +176,9 @@ def render_incidents_tab(history_df: pd.DataFrame, curated_dir: Path) -> None:
             <div class="agent-card">
                 <div class="agent-card-header">
                     <span class="agent-name" style="display: flex; align-items: center; gap: 0.4rem;">
-                        {icon_activity(14, "#2563EB")} Investigação de Causa Raiz
+                        {icon_activity(14, "#60A5FA")} Agente de Investigação
                     </span>
+                    <span class="mini-tag tag-blue">EVIDÊNCIAS</span>
                 </div>
                 <p><b>Hipótese Técnica:</b></p>
                 <p>{_safe(hypothesis)}</p>
@@ -189,20 +192,21 @@ def render_incidents_tab(history_df: pd.DataFrame, curated_dir: Path) -> None:
     with col_res:
         steps = res_info.get("correction_steps", [])
         steps_html = "".join(f"<li>{_safe(s)}</li>" for s in steps) if steps else "<li>Nenhuma ação corretiva urgente necessária.</li>"
-        manual = "Sim (Atenção)" if res_info.get("requires_manual_review", selected_row.get("revisão_manual") == "sim") else "Não (Autônomo)"
-        manual_color = "#FB7185" if "Sim" in manual else "#4ADE80"
+        manual = "SIM (Atenção)" if res_info.get("requires_manual_review", selected_row.get("revisão_manual") == "sim") else "NÃO (Autônomo)"
+        manual_color = "#FB7185" if "SIM" in manual else "#4ADE80"
         st.markdown(
             f"""
             <div class="agent-card">
                 <div class="agent-card-header">
                     <span class="agent-name" style="display: flex; align-items: center; gap: 0.4rem;">
-                        {icon_terminal(14, "#4ADE80")} Resolução & Circuit Breaker
+                        {icon_terminal(14, "#4ADE80")} Agente de resolução
                     </span>
+                    <span class="mini-tag tag-blue">PLANO DE AÇÃO</span>
                 </div>
                 <p><b>Revisão Manual Necessária:</b> <b style="color: {manual_color};">{manual}</b></p>
-                <p><b>Ações Recomendadas:</b></p>
+                <p><b>Passos de Correção:</b></p>
                 <ul>{steps_html}</ul>
-                <p><b>Impacto no Pipeline:</b> {_safe(res_info.get("impact", "Carga processada dentro dos limites de governança."))}</p>
+                <p><b>Impacto:</b> {_safe(res_info.get("impact", "Carga processada dentro dos limites de governança."))}</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -262,20 +266,4 @@ def _load_run_diagnosis(run_id: str, curated_dir: Path) -> dict:
         except Exception:
             pass
 
-    run_file = curated_dir / f"quality_diagnosis_{run_id}.json"
-    if run_file.exists():
-        try:
-            return json.loads(run_file.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-
-    latest_file = curated_dir / "quality_diagnosis.json"
-    if latest_file.exists():
-        try:
-            data = json.loads(latest_file.read_text(encoding="utf-8"))
-            if str(data.get("run_id")) == str(run_id):
-                return data
-        except Exception:
-            pass
-
-    return {}
+    return read_run_diagnosis_from_disk(run_id, curated_dir)

@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --bg-app: #f5f7fa;
+    --bg-elevated: #ffffff;
+    --bg-subtle: #f0f3f7;
+    --bg-hover: #e6ebf2;
+    --border-app: #dce3ec;
+    --border-strong: #aab8c8;
+    --text-primary: #101828;
+    --text-secondary: #475569;
+    --text-muted: #718096;
+    --accent: #2563eb;
+    --accent-strong: #1d4ed8;
+    --warning: #b45309;
+    --danger: #dc2626;
+    --info: #2563eb;
+    --chart-line: #2563eb;
+    --shadow-card: 0 14px 32px rgba(15, 23, 42, .06), 0 1px 2px rgba(15, 23, 42, .05);
+    font-family: "Segoe UI", "Inter", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button, input, select { font: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+.font-mono-code { font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace; letter-spacing: -.02em; }
+.font-display { font-family: "Segoe UI", "Inter", Arial, sans-serif; letter-spacing: -.025em; }
+.font-data { font-variant-numeric: tabular-nums; }
+
+.ambient-editorial {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, .030) 1px, transparent 1px),
+    linear-gradient(rgba(37, 99, 235, .022) 1px, transparent 1px),
+    radial-gradient(48rem 26rem at 100% -12%, rgba(37, 99, 235, .075), transparent 66%);
+  background-size: 48px 48px, 48px 48px, auto;
+}
+
+.editorial-card, .dash-card {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--border-app);
+  border-radius: 7px;
+  box-shadow: var(--shadow-card);
+}
+
+.editorial-card::before, .dash-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), #93c5fd);
+}
+
+.editorial-card { transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.editorial-card:hover { border-color: var(--border-strong); box-shadow: 0 16px 32px rgba(29, 40, 51, .10), 0 2px 4px rgba(29, 40, 51, .04); transform: translateY(-1px); }
+
+.status-dot { width: .5rem; height: .5rem; border-radius: 999px; flex: none; }
+.status-dot--healthy { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, .10); }
+.status-dot--warning { background: var(--warning); box-shadow: 0 0 0 4px rgba(168, 108, 37, .12); }
+.status-dot--danger { background: var(--danger); box-shadow: 0 0 0 4px rgba(180, 78, 70, .12); }
+
+/* Unifies the first dashboard iteration's hard-coded dark utility colors. */
+[class*="bg-[#0B0C0E]"], [class*="bg-[#111317]"], [class*="bg-[#16181D]"] { background-color: var(--bg-subtle) !important; }
+[class*="text-[#F3F2EE]"] { color: var(--text-primary) !important; }
+[class*="text-[#9E9C96]"], [class*="text-[#63615C]"] { color: var(--text-secondary) !important; }
+[class*="text-[#8EA89D]"] { color: #15803d !important; }
+[class*="text-[#C87D6E]"] { color: var(--danger) !important; }
+[class*="text-[#C5A880]"] { color: var(--accent) !important; }
+[class*="border-white/"] { border-color: var(--border-app) !important; }
+[class*="bg-[#8EA89D]"] { background-color: #16a34a !important; }
+[class*="bg-[#C87D6E]"] { background-color: var(--danger) !important; }
+[class*="bg-[#C5A880]"] { background-color: var(--accent) !important; }
+[class*="stroke-[#8EA89D]"] { stroke: #16a34a !important; }
+[class*="stroke-[#C87D6E]"] { stroke: var(--danger) !important; }
+[class*="fill-[#8EA89D]"] { fill: #16a34a !important; }
+[class*="hover:bg-white/"] { transition: background-color .16s ease; }
+
+[class*="rounded-xl"] { border-radius: 8px !important; }
+[class*="rounded-lg"] { border-radius: 6px !important; }
+[class*="rounded-md"] { border-radius: 4px !important; }
+
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-thumb { background: #b6b7b0; border-radius: 0; }

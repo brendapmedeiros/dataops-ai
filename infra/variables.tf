@@ -30,3 +30,24 @@ variable "enable_cloud_sql" {
   default     = false
 }
 
+# ativa o deploy do cockpit moderno react no cloud run
+variable "enable_frontend_react" {
+  description = "ativa o deploy do cockpit react/vite no cloud run"
+  type        = bool
+  default     = true
+}
+
+# valores iniciais de bootstrap para os segredos (podem ser atualizados via console ou cli)
+variable "gemini_api_key_initial" {
+  description = "valor inicial de bootstrap da chave gemini"
+  type        = string
+  default     = "placeholder-configure-no-secret-manager"
+  sensitive   = true
+}
+
+variable "database_url_initial" {
+  description = "valor inicial de bootstrap da database url"
+  type        = string
+  default     = "sqlite:////tmp/dataops_ai.db"
+  sensitive   = true
+}

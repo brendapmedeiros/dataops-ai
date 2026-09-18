@@ -27,7 +27,7 @@ class Settings:
     bcb_series_code: int
     bcb_start_date: str
     bcb_end_date: str
-    # chave de api para proteger endpoints
+    # Optional in development; required to execute pipelines in production.
     api_key: str | None = None
     # buckets opcionais do google cloud storage para operacao em nuvem
     gcs_quarantine_bucket: str | None = None
@@ -70,7 +70,7 @@ def load_settings(project_root: Path) -> Settings:
         bcb_series_code=int(os.getenv("BCB_SERIES_CODE", "11")),
         bcb_start_date=os.getenv("BCB_START_DATE", "01/01/2024"),
         bcb_end_date=os.getenv("BCB_END_DATE", "31/01/2024"),
-        api_key=os.getenv("DATAOPS_API_KEY", "dataops-secret-key"),
+        api_key=os.getenv("DATAOPS_API_KEY") or None,
         gcs_quarantine_bucket=os.getenv("GCS_QUARANTINE_BUCKET"),
         gcs_curated_bucket=os.getenv("GCS_CURATED_BUCKET"),
     )

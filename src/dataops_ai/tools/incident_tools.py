@@ -360,3 +360,25 @@ def _normalize_limit(limit: int) -> int:
 def _existing_columns(database: DatabaseClient, table_name: str, expected_columns: list[str]) -> list[str]:
     columns = database.column_names(table_name)
     return [column for column in expected_columns if column in columns]
+
+
+def read_run_diagnosis_from_disk(run_id: str, curated_dir: Path) -> dict:
+    # le o json do diagnostico pelo id do run ou cai no arquivo geral mais recente
+    run_file = curated_dir / f"quality_diagnosis_{run_id}.json"
+    if run_file.exists():
+        try:
+            return json.loads(run_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    latest_file = curated_dir / "quality_diagnosis.json"
+    if latest_file.exists():
+        try:
+            data = json.loads(latest_file.read_text(encoding="utf-8"))
+            if str(data.get("run_id")) == str(run_id):
+                return data
+        except Exception:
+            pass
+
+    return {}
+

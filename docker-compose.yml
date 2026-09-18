@@ -6,9 +6,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/dataops_ai
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}@postgres:5432/dataops_ai
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./src:/app/src
       - ./dashboard:/app/dashboard
@@ -25,10 +25,10 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/dataops_ai
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}@postgres:5432/dataops_ai
       DATAOPS_API_URL: http://api:8000
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     volumes:
       - ./src:/app/src
       - ./dashboard:/app/dashboard
@@ -38,15 +38,22 @@ services:
       - api
     command: streamlit run dashboard/app.py --server.address 0.0.0.0 --server.port 8501
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: dataops_ai_frontend
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - api
+
   postgres:
     image: postgres:16
     container_name: dataops_ai_postgres
     environment:
       POSTGRES_DB: dataops_ai
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
     volumes:
       - dataops_ai_postgres_data:/var/lib/postgresql/data
     healthcheck:

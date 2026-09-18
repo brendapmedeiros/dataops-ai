@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import logging
+import os
+from secrets import compare_digest
 
 from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from dataops_ai.agents.orchestrator import AgentOrchestrator
@@ -11,10 +15,16 @@ from dataops_ai.config import Settings, load_settings
 from dataops_ai.scenarios import SCENARIOS
 from dataops_ai.tools.api_tools import get_api_status
 from dataops_ai.tools.database_tools import DatabaseClient
-from dataops_ai.tools.incident_tools import read_incident_history, read_incident_history_from_database
+from dataops_ai.tools.incident_tools import (
+    read_incident_history,
+    read_incident_history_from_database,
+    read_run_diagnosis_from_disk,
+)
+import datetime
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+logger = logging.getLogger(__name__)
 
 SCENARIO_ALIASES = {
     "sem_incidente": "none",
@@ -62,10 +72,18 @@ class GeminiStatusResponse(BaseModel):
     interactions_ativas: bool
 
 
+class EnvironmentStatusResponse(BaseModel):
+    provedor: str
+    regiao: str
+    servico: str | None = None
+    quarantine_bucket: str | None = None
+
+
 class StatusResponse(BaseModel):
     banco: DatabaseStatusResponse
     api_banco_central: ApiStatusResponse
     gemini: GeminiStatusResponse
+    ambiente: EnvironmentStatusResponse | None = None
 
 
 class ScenarioResponse(BaseModel):
@@ -86,17 +104,6 @@ class HistoryRecordResponse(BaseModel):
     failed_checks: int
     severity: str
     diagnosis_engine: str
-    llm_provider: str | None = None
-    llm_model: str | None = None
-    llm_api: str | None = None
-    llm_interaction_id: str | None = None
-    llm_previous_interaction_id: str | None = None
-    llm_response_format: str | None = None
-    llm_prompt_version: str | None = None
-    llm_latency_ms: int | None = None
-    llm_tool_names: str | None = None
-    llm_tool_calls: str | None = None
-    llm_fallback_reason: str | None = None
     requires_manual_review: bool
     summary: str
     quarantined: bool = False
@@ -143,14 +150,47 @@ class RunResponse(BaseModel):
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or load_settings(PROJECT_ROOT)
-    app = FastAPI(title="DataOps AI", version="0.1.0")
+    environment = os.getenv("APP_ENV", "development").strip().lower()
+    is_production = environment in {"prod", "production"}
+    allowed_origins = [
+        origin.strip()
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173").split(",")
+        if origin.strip()
+    ]
+    if is_production and (not app_settings.api_key or "*" in allowed_origins):
+        raise RuntimeError("Produção exige DATAOPS_API_KEY e CORS_ALLOWED_ORIGINS explícito.")
+
+    app = FastAPI(
+        title="DataOps AI",
+        version="0.1.0",
+        docs_url=None if is_production else "/docs",
+        redoc_url=None if is_production else "/redoc",
+        openapi_url=None if is_production else "/openapi.json",
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "X-API-Key"],
+    )
 
     @app.get("/", response_model=RootResponse, summary="Resumo da API")
     def root() -> RootResponse:
         return {
             "projeto": "DataOps AI",
             "status": "online",
-            "endpoints": ["/saude", "/status", "/cenarios", "/historico", "/execucoes", "/docs"],
+            "endpoints": [
+                "/saude",
+                "/status",
+                "/cenarios",
+                "/historico",
+                "/execucoes",
+                "/dados/gold",
+                "/dados/quarentena",
+                *([] if is_production else ["/docs"]),
+            ],
         }
 
     @app.get("/saude", response_model=HealthResponse, summary="Verifica se a API está online")
@@ -166,8 +206,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "conectado": True,
                 "tipo": "PostgreSQL" if app_settings.database_url.startswith("postgresql") else "SQLite",
             }
-        except RuntimeError as exc:
-            database_status = {"conectado": False, "erro": str(exc)}
+        except RuntimeError:
+            database_status = {"conectado": False}
 
         api_status = get_api_status(
             app_settings.bcb_series_code,
@@ -176,6 +216,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             timeout_seconds=5,
         )
 
+        is_cloud_run = bool(os.getenv("K_SERVICE"))
         return {
             "banco": database_status,
             "api_banco_central": api_status,
@@ -183,6 +224,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "configurado": bool(app_settings.gemini_api_key),
                 "modelo": app_settings.gemini_model,
                 "interactions_ativas": app_settings.gemini_store_interactions,
+            },
+            "ambiente": {
+                "provedor": "Google Cloud Run" if is_cloud_run else "Local (Docker)",
+                "regiao": os.getenv("GCP_REGION", "us-central1" if is_cloud_run else "local"),
+                "servico": os.getenv("K_SERVICE"),
+                "quarantine_bucket": app_settings.gcs_quarantine_bucket,
             },
         }
 
@@ -195,22 +242,62 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"historico": _read_history(app_settings, limit)}
 
     @app.get("/execucoes/{run_id}/diagnostico", summary="Retorna o diagnóstico completo e diálogo da execução")
-    def get_execution_diagnosis(run_id: str) -> dict:
-        diagnosis_path = app_settings.curated_dir / f"quality_diagnosis_{run_id}.json"
-        if diagnosis_path.exists():
-            try:
-                return json.loads(diagnosis_path.read_text(encoding="utf-8"))
-            except Exception:
-                pass
-        latest_path = app_settings.curated_dir / "quality_diagnosis.json"
-        if latest_path.exists():
-            try:
-                data = json.loads(latest_path.read_text(encoding="utf-8"))
-                if str(data.get("run_id")) == str(run_id):
-                    return data
-            except Exception:
-                pass
-        return {}
+    def get_execution_diagnosis(
+        run_id: str,
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    ) -> dict:
+        if is_production and (not x_api_key or not compare_digest(x_api_key, app_settings.api_key or "")):
+            raise HTTPException(status_code=401, detail="Acesso não autorizado.")
+        return read_run_diagnosis_from_disk(run_id, app_settings.curated_dir)
+
+    @app.get("/dados/gold", summary="Retorna os registros armazenados na camada Gold (tabela oficial)")
+    def get_gold_data(limit: int = Query(default=100, ge=1, le=500)) -> dict:
+        try:
+            database = DatabaseClient(app_settings.database_url)
+            if not database.table_exists("bcb_timeseries"):
+                return {"total": 0, "registros": []}
+            query = f"SELECT date, value, series_code, source FROM bcb_timeseries ORDER BY date DESC LIMIT {limit};"
+            df = database.query_database(query)
+            if df.empty:
+                return {"total": 0, "registros": []}
+            records = []
+            for _, row in df.iterrows():
+                d = str(row.get("date"))[:10]
+                records.append({
+                    "date": d,
+                    "value": float(row.get("value", 0.0)),
+                    "series_code": int(row.get("series_code", 11)),
+                    "source": str(row.get("source", "API BCB SGS")),
+                })
+            records_chrono = sorted(records, key=lambda x: x["date"])
+            return {"total": len(records), "registros": records_chrono}
+        except Exception:
+            logger.exception("Falha ao consultar a camada Gold")
+            return {"total": 0, "registros": []}
+
+    @app.get("/dados/quarentena", summary="Retorna os lotes isolados na Quarentena (DLQ)")
+    def get_quarantine_data() -> dict:
+        try:
+            csv_files = sorted(app_settings.dlq_dir.glob("quarantine_*.csv"), key=lambda f: f.stat().st_mtime, reverse=True)
+            batches = []
+            for f in csv_files:
+                stat = f.stat()
+                dt = datetime.datetime.fromtimestamp(stat.st_mtime).isoformat()
+                try:
+                    lines = f.read_text(encoding="utf-8").splitlines()
+                    rows_count = max(0, len(lines) - 1)
+                except Exception:
+                    rows_count = 0
+                batches.append({
+                    "arquivo": f.name,
+                    "isolado_em": dt,
+                    "tamanho_bytes": stat.st_size,
+                    "linhas_rejeitadas": rows_count,
+                })
+            return {"total_lotes": len(batches), "lotes": batches}
+        except Exception:
+            logger.exception("Falha ao consultar a quarentena")
+            return {"total_lotes": 0, "lotes": []}
 
     @app.post("/execucoes", response_model=RunResponse, summary="Executa a pipeline")
     def run_pipeline(
@@ -218,7 +305,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         x_api_key: str | None = Header(default=None, alias="X-API-Key"),
     ) -> RunResponse:
         # valida a api key se estiver configurada
-        if app_settings.api_key and x_api_key != app_settings.api_key:
+        if app_settings.api_key and (not x_api_key or not compare_digest(x_api_key, app_settings.api_key)):
             raise HTTPException(status_code=401, detail="Acesso não autorizado: chave de API inválida.")
 
         try:

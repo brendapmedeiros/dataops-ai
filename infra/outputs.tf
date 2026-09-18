@@ -10,6 +10,16 @@ output "dashboard_url" {
   value       = google_cloud_run_v2_service.dashboard.uri
 }
 
+output "frontend_url" {
+  description = "url publica do cockpit react"
+  value       = var.enable_frontend_react ? google_cloud_run_v2_service.frontend[0].uri : null
+}
+
+output "artifact_registry_repository" {
+  description = "caminho do repositorio no artifact registry"
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.repo.repository_id}"
+}
+
 output "quarantine_bucket" {
   description = "nome do bucket de quarentena"
   value       = google_storage_bucket.quarantine.name

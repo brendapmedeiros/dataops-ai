@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  # rodo os testes unitarios e validacao de codigo
-  test:
+  # rodo os testes unitarios do backend python
+  test-backend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do repositorio
@@ -29,7 +29,31 @@ jobs:
       - name: Executo suite de testes
         run: pytest
 
-  # valido a sintaxe dos arquivos terraform
+  # valido build e tipos do novo frontend react
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configuro node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalo dependencias do frontend
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build do frontend
+        run: |
+          cd frontend
+          npm run build
+
+  # valido a sintaxe e conformidade dos arquivos terraform
   validate-infra:
     runs-on: ubuntu-latest
     steps:
@@ -52,41 +76,77 @@ jobs:
 
   # publico os servicos no cloud run apenas na branch main quando as credenciais existirem
   deploy:
-    needs: [test, validate-infra]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [test-backend, test-frontend, validate-infra]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_REGION: us-central1
+      IMAGE_TAG: ${{ github.sha }}
     steps:
       - name: Checkout do repositorio
         uses: actions/checkout@v4
 
       - name: Autentico no gcp via workload identity federation
-        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Configuro gcloud cli
-        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Autentico no artifact registry
-        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
       - name: Build e push da imagem api
-        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
         run: |
-          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dataops-ai/api:${{ github.sha }} .
-          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dataops-ai/api:${{ github.sha }}
+          docker build \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/api:${{ env.IMAGE_TAG }} \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/api:latest .
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/api:${{ env.IMAGE_TAG }}
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/api:latest
 
-      - name: Atualizo o servico cloud run da api
-        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+      - name: Build e push da imagem dashboard (streamlit)
+        run: |
+          docker build \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/dashboard:${{ env.IMAGE_TAG }} \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/dashboard:latest .
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/dashboard:${{ env.IMAGE_TAG }}
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/dashboard:latest
+
+      - name: Build e push da imagem frontend (react)
+        run: |
+          docker build \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/frontend:${{ env.IMAGE_TAG }} \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/frontend:latest ./frontend
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/frontend:${{ env.IMAGE_TAG }}
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/frontend:latest
+
+      - name: Deploy do servico cloud run da api
         run: |
           gcloud run deploy dataops-api \
-            --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dataops-ai/api:${{ github.sha }} \
-            --region us-central1 \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/api:${{ env.IMAGE_TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --quiet
+
+      - name: Deploy do servico cloud run do dashboard
+        run: |
+          gcloud run deploy dataops-dashboard \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/dashboard:${{ env.IMAGE_TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --port 8501 \
+            --command streamlit \
+            --args "run,dashboard/app.py,--server.port,8501,--server.address,0.0.0.0,--server.headless,true" \
+            --quiet
+
+      - name: Deploy do servico cloud run do frontend react
+        run: |
+          gcloud run deploy dataops-frontend \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/dataops-ai/frontend:${{ env.IMAGE_TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --port 80 \
             --quiet
