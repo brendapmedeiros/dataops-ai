@@ -92,11 +92,21 @@ def render_cockpit_header(status: dict | None, history_df: pd.DataFrame) -> None
 
     import os
     ambiente = status.get("ambiente", {}) if status else {}
-    provedor = ambiente.get("provedor") or ("Google Cloud Run" if os.getenv("K_SERVICE") else "Localhost")
-    regiao = ambiente.get("regiao") or os.getenv("GCP_REGION", "us-central1" if "Cloud" in provedor else "local")
-    is_cloud = "Cloud" in provedor
-    env_cls = "chip-emerald" if is_cloud else "chip-blue"
-    env_text = f"Ambiente: Cloud Run ({regiao})" if is_cloud else "Ambiente: Localhost"
+    space_id = os.getenv("SPACE_ID")
+    is_cloud_run = bool(os.getenv("K_SERVICE"))
+    if space_id:
+        env_cls = "chip-emerald"
+        env_text = f"Ambiente: Spaces ({space_id})"
+    elif is_cloud_run:
+        regiao = os.getenv("GCP_REGION", "us-central1")
+        env_cls = "chip-emerald"
+        env_text = f"Ambiente: Cloud Run ({regiao})"
+    elif ambiente.get("provedor"):
+        env_cls = "chip-emerald"
+        env_text = f"Ambiente: {ambiente.get('provedor')}"
+    else:
+        env_cls = "chip-blue"
+        env_text = "Ambiente: Localhost"
 
     st.markdown(
         f"""

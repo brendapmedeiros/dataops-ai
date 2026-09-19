@@ -167,3 +167,27 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --port 80 \
             --quiet
+
+  # sincronizo automaticamente com o hugging face spaces para demonstracao publica
+  sync-huggingface:
+    needs: [test-backend, test-frontend, validate-infra]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Sincronizo com o Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USER: ${{ secrets.HF_USERNAME || 'brendapmedeiros' }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN nao configurado nos secrets do GitHub. Pulando sincronizacao."
+            exit 0
+          fi
+          git push --force https://$HF_USER:$HF_TOKEN@huggingface.co/spaces/$HF_USER/dataops-ai main
+

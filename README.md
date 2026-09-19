@@ -1,6 +1,16 @@
+---
+title: DataOps AI
+colorFrom: indigo
+colorTo: blue
+sdk: streamlit
+app_file: app.py
+pinned: false
+---
+
 # DataOps AI
 
 [![CI-CD DataOps AI](https://github.com/brendapmedeiros/dataops-ai/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/brendapmedeiros/dataops-ai/actions/workflows/ci_cd.yml)
+[![Live Demo Hugging Face](https://img.shields.io/badge/Live%20Demo-Hugging%20Face%20Spaces-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/spaces/brendapmedeiros/dataops-ai)
 ![GCP Cloud Run](https://img.shields.io/badge/Deploy-Google%20Cloud%20Run-2563EB?logo=googlecloud&logoColor=white)
 ![GCS Data Lake](https://img.shields.io/badge/Storage-Google%20Cloud%20Storage-34A853?logo=googlecloud&logoColor=white)
 ![Terraform](https://img.shields.io/badge/IaC-Terraform%201.7-623CE4?logo=terraform&logoColor=white)
