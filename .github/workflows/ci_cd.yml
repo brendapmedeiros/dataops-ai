@@ -74,10 +74,27 @@ jobs:
           terraform init -backend=false
           terraform validate
 
+  # verifico se as credenciais do gcp estao configuradas nos secrets
+  check-credentials:
+    runs-on: ubuntu-latest
+    outputs:
+      has_gcp: ${{ steps.check.outputs.has_gcp }}
+    steps:
+      - id: check
+        name: Checo presenca das credenciais gcp
+        env:
+          WIP: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+        run: |
+          if [ -n "$WIP" ]; then
+            echo "has_gcp=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_gcp=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # publico os servicos no cloud run apenas na branch main quando as credenciais existirem
   deploy:
-    needs: [test-backend, test-frontend, validate-infra]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+    needs: [test-backend, test-frontend, validate-infra, check-credentials]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.check-credentials.outputs.has_gcp == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
