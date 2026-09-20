@@ -19,16 +19,15 @@ def _safe(value: object) -> str:
     return html.escape(str(value))
 
 
-def _get_badge_base64() -> str:
-    # carrego o badge oficial em base64 se existir no diretorio
-    img_path = Path(__file__).resolve().parents[1] / "assets" / "dataops_badge.jpg"
-    if img_path.exists():
+def _get_badge_html() -> str:
+    # carrego o badge oficial em svg vetorial puro
+    svg_path = Path(__file__).resolve().parents[1] / "assets" / "dataops_badge.svg"
+    if svg_path.exists():
         try:
-            data = base64.b64encode(img_path.read_bytes()).decode("utf-8")
-            return f"data:image/jpeg;base64,{data}"
+            return f'<div class="brand-badge-img" style="display:inline-flex;align-items:center;">{svg_path.read_text(encoding="utf-8")}</div>'
         except Exception:
-            return ""
-    return ""
+            return icon_shield_check(24, "#FAFAFA")
+    return icon_shield_check(24, "#FAFAFA")
 
 
 def render_cockpit_header(status: dict | None, history_df: pd.DataFrame) -> None:
@@ -83,12 +82,7 @@ def render_cockpit_header(status: dict | None, history_df: pd.DataFrame) -> None
     ai_text = "Engine: Gemini Flash" if gemini_ok else "Engine: Regras Locais"
     ai_icon = icon_cpu(13, "currentColor")
 
-    badge_b64 = _get_badge_base64()
-    badge_html = (
-        f'<img src="{badge_b64}" class="brand-badge-img" alt="DataOps AI" />'
-        if badge_b64
-        else icon_shield_check(24, "#FAFAFA")
-    )
+    badge_html = _get_badge_html()
 
     import os
     ambiente = status.get("ambiente", {}) if status else {}

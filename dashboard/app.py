@@ -107,7 +107,7 @@ def _friendly_scenario_label(value: object) -> str:
     return clean.replace("_", " ") or raw
 
 
-ICON_PATH = PROJECT_ROOT / "dashboard" / "assets" / "dataops_badge.jpg"
+ICON_PATH = PROJECT_ROOT / "dashboard" / "assets" / "dataops_badge.svg"
 PAGE_ICON = str(ICON_PATH) if ICON_PATH.exists() else None
 
 st.set_page_config(

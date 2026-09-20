@@ -189,5 +189,11 @@ jobs:
             echo "HF_TOKEN nao configurado nos secrets do GitHub. Pulando sincronizacao."
             exit 0
           fi
-          git push --force https://$HF_USER:$HF_TOKEN@huggingface.co/spaces/$HF_USER/dataops-ai main
+
+          # crio um commit isolado sem historico de binarios para aprovacao no hook do hugging face
+          git checkout --orphan hf-deploy
+          git rm -rf --cached .
+          git add app.py dashboard/ src/ config/ data/ requirements.txt README.md
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -m "deploy: dataops-ai"
+          git push --force https://$HF_USER:$HF_TOKEN@huggingface.co/spaces/$HF_USER/dataops-ai hf-deploy:main
 
