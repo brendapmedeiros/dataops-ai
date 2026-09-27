@@ -1,12 +1,3 @@
----
-title: DataOps AI
-colorFrom: indigo
-colorTo: blue
-sdk: streamlit
-app_file: app.py
-pinned: false
----
-
 # DataOps AI
 
 [![CI-CD DataOps AI](https://github.com/brendapmedeiros/dataops-ai/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/brendapmedeiros/dataops-ai/actions/workflows/ci_cd.yml)
